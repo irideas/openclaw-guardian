@@ -28,6 +28,8 @@
 - 同样是请求 `oauth/token`
 - 使用显式代理的 `EnvHttpProxyAgent` 或 `curl -x ...` 时，假 `code` 会得到正常的 `401 token_expired`
 - 使用未显式代理的纯 Node `fetch` 路径时，则可能得到 `403 unsupported_country_region_territory`
+- 在某些代理链路下，即使已经显式安装 `EnvHttpProxyAgent`，`undici` 访问这个端点仍可能出现 `Connect Timeout Error`
+- 同一条代理链路上，如果改用 `curl -x ...` 请求这个端点，则可以稳定拿到 `200` 或 `401`
 
 这说明问题不是“账号一定不支持”或“代理一定不可用”，而是 **目标登录链路没有稳定走到代理感知的 HTTP 客户端**。
 
@@ -56,6 +58,8 @@ openclaw models auth login --provider openai-codex
    文件：`bash-init.bash`
 2. **Node preload 注入**
    文件：`env-proxy-preload.mjs`
+3. **`oauth/token` 端点的极窄 `curl fallback`**
+   逻辑同样位于：`env-proxy-preload.mjs`
 
 两者配合的工作方式如下：
 
@@ -97,6 +101,24 @@ setGlobalDispatcher(new EnvHttpProxyAgent())
 ```
 
 这样后续 CLI 里那条裸 `fetch(...)` 就能继承代理设置。
+
+同时，当前版本还会额外安装一个只针对
+`https://auth.openai.com/oauth/token` 的极窄回退层：
+
+- 除这个端点外，其他请求仍走原始 `fetch`
+- 只有这个端点会切换成 `curl -x <proxy>` 发起请求
+- `curl` 的响应会被重新包装成标准 `Response`，因此业务代码无需感知
+
+之所以要多这一层，不是为了替代 `undici`，而是因为本地已经验证过：
+
+- `EnvHttpProxyAgent` 解决了“未显式走代理”的第一层问题
+- 但在某些代理链路下，`undici` 访问 `oauth/token` 仍可能超时
+- 同路径上的 `curl` 却可以稳定完成 token 交换
+
+因此最终的正式方案实际上是“两层修复”：
+
+1. 用 `EnvHttpProxyAgent` 修正全局 `fetch` 的代理感知
+2. 用极窄的 `curl fallback` 兜住 `oauth/token` 这个已知异常端点
 
 ## 为什么不用这些方案
 
@@ -216,6 +238,14 @@ openclaw models auth login --provider openai-codex
 只要当前 shell 已经准备好了正确的代理环境变量，
 包装层就会在这条命令上自动注入 `preload`。
 
+在当前实现中，这条命令的完整成功路径是：
+
+1. 浏览器完成 OpenAI 授权
+2. CLI 收到 `localhost:1455/auth/callback`
+3. preload 已提前安装 `EnvHttpProxyAgent`
+4. 当 CLI 交换 `code -> token` 时，`oauth/token` 请求由 `curl fallback` 接管
+5. 成功拿到 token，并写回本地 `auth-profiles.json`
+
 ## 快速验证
 
 如果你还不想立即做真实 OAuth 登录，可以先执行：
@@ -234,6 +264,7 @@ tail -n 20 "$HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log"
 
 - `source = "bash-init"` 且 `event = "inject_preload"`
 - `source = "env-proxy-preload"` 且 `event = "preload_activated"`
+- `source = "env-proxy-preload"` 且 `event = "curl_fallback_installed"`
 
 说明这套覆盖逻辑已经成功接管目标命令。
 
@@ -274,6 +305,12 @@ tail -n 20 "$HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log"
 OPENCLAW_PROXY_PRELOAD_DISABLE=1 openclaw models auth login --provider openai-codex
 ```
 
+如果只想禁用 `curl fallback`，但仍保留 `EnvHttpProxyAgent`，可以使用：
+
+```bash
+OPENCLAW_PROXY_CURL_FALLBACK_DISABLE=1 openclaw models auth login --provider openai-codex
+```
+
 ### 方式 2：当前 shell 禁用
 
 ```bash
@@ -303,6 +340,19 @@ export OPENCLAW_PROXY_PRELOAD_DISABLE=1
 - preload 是否被注入
 - preload 是否成功激活
 - 当时使用的代理值是什么
+- 是否安装了 `curl fallback`
+- `oauth/token` 是否真的由 `curl` 发出
+- `curl fallback` 最终返回的状态码是什么
+
+常见事件包括：
+
+- `inject_preload`
+- `preload_loaded`
+- `preload_activated`
+- `curl_fallback_installed`
+- `curl_fallback_spawn`
+- `curl_fallback_succeeded`
+- `curl_fallback_failed`
 
 ## 维护说明
 

@@ -7,6 +7,9 @@
 - [openai-codex-auth-proxy](./openai-codex-auth-proxy/README.md)
   用于修正 `openclaw models auth login --provider openai-codex` 在某些代理环境下
   可能出现的 `oauth/token` 交换异常。
+  当前实现采用“两层修复”：
+  `EnvHttpProxyAgent` 负责接管全局代理感知，
+  `curl fallback` 负责兜住 `https://auth.openai.com/oauth/token` 这一已知异常端点。
 
 ## 设计原则
 

@@ -18,8 +18,10 @@
 // `<OPENCLAW_HOME>/local-overrides/openai-codex-auth-proxy/`
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { spawn } from "node:child_process";
 
 // 根据当前文件位置反推出 `OPENCLAW_HOME`。
 // 当前文件应位于：
@@ -85,6 +87,188 @@ function resolveEffectiveProxy() {
     normalize(process.env.http_proxy) ||
     normalize(process.env.HTTP_PROXY)
   );
+}
+
+function isOpenAITokenEndpoint(url) {
+  return url === "https://auth.openai.com/oauth/token";
+}
+
+function parseCurlHeaderFile(text) {
+  // `curl -D <file>` 在 HTTPS 代理场景下，通常会把：
+  // 1. `HTTP/1.1 200 Connection established`
+  // 2. 真实目标站点返回的 `HTTP/2 200/401/...`
+  // 都写进同一个头文件。
+  //
+  // 这里需要做的，就是取“最后一个” HTTP 响应块作为真实响应。
+  const normalized = text.replace(/\r\n/g, "\n");
+  const chunks = normalized
+    .split(/\n\n+/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .filter((value) => /^HTTP\/\d(?:\.\d)?\s+\d+/.test(value));
+
+  const last = chunks.at(-1);
+  if (!last) {
+    throw new Error("curl response header block not found");
+  }
+
+  const lines = last.split("\n");
+  const statusLine = lines.shift() || "";
+  const match = statusLine.match(/^HTTP\/\d(?:\.\d)?\s+(\d+)/);
+  if (!match) {
+    throw new Error(`invalid status line from curl: ${statusLine}`);
+  }
+
+  const status = Number(match[1]);
+  const headers = new Headers();
+  for (const line of lines) {
+    const index = line.indexOf(":");
+    if (index === -1) continue;
+    const key = line.slice(0, index).trim();
+    const value = line.slice(index + 1).trim();
+    if (!key) continue;
+    headers.append(key, value);
+  }
+
+  return { status, headers };
+}
+
+async function waitForProcessResult(child, stdoutPath, stderrPath) {
+  return await new Promise((resolve, reject) => {
+    child.once("error", reject);
+    child.once("close", (code, signal) => {
+      try {
+        const stdout = fs.existsSync(stdoutPath) ? fs.readFileSync(stdoutPath, "utf8") : "";
+        const stderr = fs.existsSync(stderrPath) ? fs.readFileSync(stderrPath, "utf8") : "";
+        resolve({ code, signal, stdout, stderr });
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+async function curlFetchThroughProxy(request, effectiveProxy) {
+  // 这个回退只服务于 `auth.openai.com/oauth/token`。
+  // 我们已经本地验证过：
+  // - `undici` + `EnvHttpProxyAgent` 在当前代理链路上可能对这个端点超时
+  // - `curl -x <proxy> ... https://auth.openai.com/oauth/token` 可以稳定返回 200/401
+  //
+  // 因此这里用 `curl` 作为兼容层，把响应重新包装成标准 `Response`。
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-oauth-token-"));
+  const headerPath = path.join(tempDir, "headers.txt");
+  const bodyPath = path.join(tempDir, "body.txt");
+  const stderrPath = path.join(tempDir, "stderr.txt");
+
+  try {
+    const method = request.method || "GET";
+    const args = [
+      "-sS",
+      "-x",
+      effectiveProxy,
+      "-X",
+      method,
+      request.url,
+      "-D",
+      headerPath,
+      "-o",
+      bodyPath,
+    ];
+
+    // 为了尽量还原原始请求，这里把 request headers 逐个传给 `curl`。
+    // `host` 和 `content-length` 由 `curl` 自己处理，避免冲突。
+    request.headers.forEach((value, key) => {
+      const lower = key.toLowerCase();
+      if (lower === "host" || lower === "content-length") return;
+      args.push("-H", `${key}: ${value}`);
+    });
+
+    if (method !== "GET" && method !== "HEAD") {
+      const bodyText = await request.text();
+      if (bodyText.length > 0) {
+        args.push("--data-raw", bodyText);
+      }
+    }
+
+    log("curl_fallback_spawn", {
+      url: request.url,
+      method,
+      effectiveProxy,
+    });
+
+    const stderrFd = fs.openSync(stderrPath, "w");
+    const child = spawn("curl", args, {
+      stdio: ["ignore", "ignore", stderrFd],
+    });
+    const { code, signal, stderr } = await waitForProcessResult(child, bodyPath, stderrPath);
+    fs.closeSync(stderrFd);
+
+    if (code !== 0) {
+      log("curl_fallback_failed", {
+        url: request.url,
+        method,
+        effectiveProxy,
+        code,
+        signal,
+        stderr,
+      });
+      throw new TypeError(`curl fallback failed: ${stderr || `exit ${code}`}`.trim());
+    }
+
+    const headerText = fs.readFileSync(headerPath, "utf8");
+    const bodyText = fs.readFileSync(bodyPath, "utf8");
+    const { status, headers } = parseCurlHeaderFile(headerText);
+
+    log("curl_fallback_succeeded", {
+      url: request.url,
+      method,
+      effectiveProxy,
+      status,
+    });
+
+    return new Response(bodyText, {
+      status,
+      headers,
+    });
+  } finally {
+    try {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    } catch {
+      // 临时目录清理失败不影响主流程。
+    }
+  }
+}
+
+function installCurlFallbackFetch(effectiveProxy) {
+  // 这里保留原始 `fetch`，仅对极小范围的目标端点做拦截。
+  const originalFetch = globalThis.fetch?.bind(globalThis);
+  if (!originalFetch) {
+    log("curl_fallback_skipped", { reason: "global_fetch_missing" });
+    return;
+  }
+
+  globalThis.fetch = async function patchedFetch(input, init) {
+    const request = new Request(input, init);
+
+    // 只拦截 OpenAI OAuth 的 token 交换端点。
+    // 其他请求继续走原始 `fetch`，避免扩大影响面。
+    if (!isOpenAITokenEndpoint(request.url)) {
+      return await originalFetch(input, init);
+    }
+
+    // 提供一个开关，便于以后按需关闭 `curl` 回退。
+    if (process.env.OPENCLAW_PROXY_CURL_FALLBACK_DISABLE === "1") {
+      return await originalFetch(input, init);
+    }
+
+    return await curlFetchThroughProxy(request, effectiveProxy);
+  };
+
+  log("curl_fallback_installed", {
+    effectiveProxy,
+    target: "https://auth.openai.com/oauth/token",
+  });
 }
 
 function resolveOpenClawRoot() {
@@ -177,6 +361,11 @@ async function main() {
     // 完成后，后续裸 `fetch(...)` 也会按环境变量走代理。
     const agent = new undici.EnvHttpProxyAgent();
     undici.setGlobalDispatcher(agent);
+
+    // 在当前代理链路下，`undici` 对 `oauth/token` 这一个端点可能出现
+    // `Connect Timeout Error`，但 `curl` 同路径是正常的。
+    // 因此这里额外安装一个极窄作用域的 `fetch` 回退层，只兜底这个端点。
+    installCurlFallbackFetch(effectiveProxy);
 
     log("preload_activated", {
       openclawRoot,
