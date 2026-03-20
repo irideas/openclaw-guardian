@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const CURRENT_FILE = fileURLToPath(import.meta.url);
 export const TEST_DIR = path.dirname(CURRENT_FILE);
 export const REPO_ROOT = path.resolve(TEST_DIR, "..");
+export const RUNTIME_ROOT = path.join(REPO_ROOT, "runtime");
 
 export function createTempLogDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-local-overrides-test-"));
@@ -18,8 +19,10 @@ export function cleanupDir(dirPath) {
 
 export function createTempRepoFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-local-overrides-fixture-"));
-  fs.mkdirSync(path.join(root, "modules"), { recursive: true });
-  fs.mkdirSync(path.join(root, "config"), { recursive: true });
+  // 临时夹具按照“仓库根 + runtime/”的真实布局创建，
+  // 这样测试覆盖的就是迁移后的运行时结构，而不是过时目录。
+  fs.mkdirSync(path.join(root, "runtime", "modules"), { recursive: true });
+  fs.mkdirSync(path.join(root, "runtime", "config"), { recursive: true });
   return root;
 }
 

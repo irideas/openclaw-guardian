@@ -16,7 +16,8 @@ import { fileURLToPath } from "node:url";
 
 const CURRENT_FILE = fileURLToPath(import.meta.url);
 const BOOTSTRAP_DIR = path.dirname(CURRENT_FILE);
-const DEFAULT_REPO_ROOT = path.resolve(BOOTSTRAP_DIR, "..");
+const DEFAULT_RUNTIME_ROOT = path.resolve(BOOTSTRAP_DIR, "..");
+const DEFAULT_REPO_ROOT = path.resolve(DEFAULT_RUNTIME_ROOT, "..");
 
 export function normalize(value) {
   // 把各种空值、空白串统一归一成 `null`，
@@ -31,10 +32,10 @@ export function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-export function listModuleIds(repoRoot) {
+export function listModuleIds(runtimeRoot) {
   // 模块发现只认 `modules/` 目录下的一层子目录。
   // 这样仓库结构简单直接，也便于后续模板化生成模块。
-  const modulesDir = path.join(repoRoot, "modules");
+  const modulesDir = path.join(runtimeRoot, "modules");
   try {
     return fs.readdirSync(modulesDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
@@ -45,28 +46,28 @@ export function listModuleIds(repoRoot) {
   }
 }
 
-export function readManifest(repoRoot, moduleId) {
+export function readManifest(runtimeRoot, moduleId) {
   // manifest 路径约定固定为：
   // `modules/<module-id>/module.json`
-  const manifestPath = path.join(repoRoot, "modules", moduleId, "module.json");
+  const manifestPath = path.join(runtimeRoot, "modules", moduleId, "module.json");
   return {
     manifestPath,
     manifest: readJson(manifestPath),
   };
 }
 
-export function discoverModuleManifests(repoRoot) {
+export function discoverModuleManifests(runtimeRoot) {
   // 这里即使某个模块 manifest 读取失败，也不会中断整个发现流程。
   // 原因是：
   // - 运行时应该尽量把“坏模块”和“好模块”隔离开
   // - 后续日志里仍然需要知道哪个模块的 manifest 缺失或损坏
   const discovered = [];
-  for (const moduleId of listModuleIds(repoRoot)) {
+  for (const moduleId of listModuleIds(runtimeRoot)) {
     try {
-      const { manifestPath, manifest } = readManifest(repoRoot, moduleId);
+      const { manifestPath, manifest } = readManifest(runtimeRoot, moduleId);
       discovered.push({ moduleId, manifestPath, manifest });
     } catch {
-      discovered.push({ moduleId, manifestPath: path.join(repoRoot, "modules", moduleId, "module.json"), manifest: null });
+      discovered.push({ moduleId, manifestPath: path.join(runtimeRoot, "modules", moduleId, "module.json"), manifest: null });
     }
   }
   return discovered;
@@ -76,6 +77,7 @@ export function resolveRuntimePaths(env = process.env) {
   // 所有运行时路径都允许被环境变量覆盖。
   // 这样测试可以把日志目录、配置文件和仓库根切到临时目录，
   // 而正式运行时则回退到约定的默认路径。
+  const runtimeRoot = normalize(env.OPENCLAW_LOCAL_OVERRIDES_RUNTIME_ROOT) || DEFAULT_RUNTIME_ROOT;
   const repoRoot = normalize(env.OPENCLAW_LOCAL_OVERRIDES_REPO_ROOT) || DEFAULT_REPO_ROOT;
   const openclawHome = normalize(env.OPENCLAW_LOCAL_OVERRIDES_HOME) || path.resolve(repoRoot, "..");
   const logDir =
@@ -83,9 +85,10 @@ export function resolveRuntimePaths(env = process.env) {
     path.join(openclawHome, "logs", "local-overrides");
   const configPath =
     normalize(env.OPENCLAW_LOCAL_OVERRIDES_CONFIG_PATH) ||
-    path.join(repoRoot, "config", "enabled-modules.json");
+    path.join(runtimeRoot, "config", "enabled-modules.json");
 
   return {
+    runtimeRoot,
     repoRoot,
     openclawHome,
     logDir,
@@ -208,7 +211,7 @@ export function isEnabledByDefault(manifest) {
   return manifest?.enabledByDefault === true;
 }
 
-export function resolveActiveModuleIds(repoRoot, configPath) {
+export function resolveActiveModuleIds(runtimeRoot, configPath) {
   // 当前活动模块的求值顺序：
   // 1. 先发现所有模块
   // 2. 选出 `enabledByDefault: true` 的模块
@@ -216,7 +219,7 @@ export function resolveActiveModuleIds(repoRoot, configPath) {
   // 4. 最后减去配置里的 `disabledModules`
   //
   // 这样“默认策略”和“本地覆盖策略”就能明确分层。
-  const discovered = discoverModuleManifests(repoRoot);
+  const discovered = discoverModuleManifests(runtimeRoot);
   const defaults = discovered
     .filter(({ manifest }) => manifest && isEnabledByDefault(manifest))
     .map(({ moduleId }) => moduleId);

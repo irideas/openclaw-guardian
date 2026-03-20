@@ -8,11 +8,26 @@
 - 次版本：增加新能力、扩展模块框架
 - 修订版本：修复问题、补充测试或文档
 
+## 0.7.0 - 2026-03-20
+
+### Added
+
+- 增加 `runtime/` 作为运行时根目录
+- 增加 `docs/` 目录，用于收纳测试策略与人工 E2E 文档
+- 增加“仓库工程目录 + 运行时软链接目录”的安装方式说明
+
+### Changed
+
+- Git 仓库建议安装路径调整为 `$HOME/.openclaw/openclaw-local-overrides`
+- 运行时目录固定为 `$HOME/.openclaw/local-overrides`，并通过软链接指向仓库内的 `runtime/`
+- `README`、模块说明、测试夹具与集成测试全部切换到新目录结构
+- 仓库版本提升到 `0.7.0`
+
 ## 0.6.0 - 2026-03-20
 
 ### Added
 
-- 增加人工端到端验证清单 [MANUAL-E2E.md](./MANUAL-E2E.md)
+- 增加人工端到端验证清单 [MANUAL-E2E.md](./docs/MANUAL-E2E.md)
 
 ### Changed
 
@@ -77,7 +92,7 @@
 
 ### Added
 
-- 增加共享运行时模块 [bootstrap/module-runtime.mjs](./bootstrap/module-runtime.mjs)
+- 增加共享运行时模块 [module-runtime.mjs](./runtime/bootstrap/module-runtime.mjs)
 - 增加公共单测与集成测试
 - 增加 [package.json](./package.json) 与统一 `npm test` 测试入口
 

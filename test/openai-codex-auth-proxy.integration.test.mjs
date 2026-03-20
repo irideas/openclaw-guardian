@@ -2,10 +2,17 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { createTempLogDir, cleanupDir, hasOpenClawBinary, REPO_ROOT, resolveProxyForTests, runProcess } from "./test-helpers.mjs";
+import {
+  createTempLogDir,
+  cleanupDir,
+  hasOpenClawBinary,
+  REPO_ROOT,
+  resolveProxyForTests,
+  runProcess,
+} from "./test-helpers.mjs";
 
-const BOOTSTRAP_ENTRY = path.join(REPO_ROOT, "bootstrap", "node-preload-entry.mjs");
-const BOOTSTRAP_BASH = path.join(REPO_ROOT, "bootstrap", "bash-init.bash");
+const BOOTSTRAP_ENTRY = path.join(REPO_ROOT, "runtime", "bootstrap", "node-preload-entry.mjs");
+const BOOTSTRAP_BASH = path.join(REPO_ROOT, "runtime", "bootstrap", "bash-init.bash");
 
 test("统一 preload 路由应能跑通 openai-codex-auth-proxy 的假 token 交换", () => {
   const logDir = createTempLogDir();

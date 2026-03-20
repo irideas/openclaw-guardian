@@ -12,11 +12,12 @@ import {
   resolveModuleLogPath,
   resolveRuntimePaths,
   validateManifest,
-} from "../bootstrap/module-runtime.mjs";
+} from "../runtime/bootstrap/module-runtime.mjs";
 import { cleanupDir, createTempRepoFixture, writeJson } from "./test-helpers.mjs";
 
 test("resolveRuntimePaths 应当支持环境变量覆盖", () => {
   const paths = resolveRuntimePaths({
+    OPENCLAW_LOCAL_OVERRIDES_RUNTIME_ROOT: "/tmp/repo/runtime",
     OPENCLAW_LOCAL_OVERRIDES_REPO_ROOT: "/tmp/repo",
     OPENCLAW_LOCAL_OVERRIDES_HOME: "/tmp/home",
     OPENCLAW_LOCAL_OVERRIDES_LOG_DIR: "/tmp/logs",
@@ -24,6 +25,7 @@ test("resolveRuntimePaths 应当支持环境变量覆盖", () => {
   });
 
   assert.deepEqual(paths, {
+    runtimeRoot: "/tmp/repo/runtime",
     repoRoot: "/tmp/repo",
     openclawHome: "/tmp/home",
     logDir: "/tmp/logs",
@@ -124,35 +126,36 @@ test("isEnabledByDefault 应当识别默认启用模块", () => {
 
 test("discoverModuleManifests 与 resolveActiveModuleIds 应当支持默认启用和显式禁用", () => {
   const repoRoot = createTempRepoFixture();
+  const runtimeRoot = path.join(repoRoot, "runtime");
 
   try {
-    writeJson(path.join(repoRoot, "modules", "alpha", "module.json"), {
+    writeJson(path.join(runtimeRoot, "modules", "alpha", "module.json"), {
       id: "alpha",
       kind: "node-preload",
       enabledByDefault: true,
       entry: { preload: "./preload-hook.mjs" },
     });
-    writeJson(path.join(repoRoot, "modules", "beta", "module.json"), {
+    writeJson(path.join(runtimeRoot, "modules", "beta", "module.json"), {
       id: "beta",
       kind: "node-preload",
       enabledByDefault: false,
       entry: { preload: "./preload-hook.mjs" },
     });
-    fs.mkdirSync(path.join(repoRoot, "modules", "broken"), { recursive: true });
-    writeJson(path.join(repoRoot, "config", "enabled-modules.json"), {
+    fs.mkdirSync(path.join(runtimeRoot, "modules", "broken"), { recursive: true });
+    writeJson(path.join(runtimeRoot, "config", "enabled-modules.json"), {
       enabledModules: ["beta"],
       disabledModules: ["alpha"],
     });
 
-    const discovered = discoverModuleManifests(repoRoot);
+    const discovered = discoverModuleManifests(runtimeRoot);
     assert.deepEqual(
       discovered.map((item) => item.moduleId),
       ["alpha", "beta", "broken"],
     );
 
     const active = resolveActiveModuleIds(
-      repoRoot,
-      path.join(repoRoot, "config", "enabled-modules.json"),
+      runtimeRoot,
+      path.join(runtimeRoot, "config", "enabled-modules.json"),
     );
     assert.deepEqual(active, ["beta"]);
   } finally {
@@ -162,15 +165,16 @@ test("discoverModuleManifests 与 resolveActiveModuleIds 应当支持默认启�
 
 test("resolveActiveModuleIds 在配置缺失时应回退到 enabledByDefault", () => {
   const repoRoot = createTempRepoFixture();
+  const runtimeRoot = path.join(repoRoot, "runtime");
 
   try {
-    writeJson(path.join(repoRoot, "modules", "alpha", "module.json"), {
+    writeJson(path.join(runtimeRoot, "modules", "alpha", "module.json"), {
       id: "alpha",
       kind: "node-preload",
       enabledByDefault: true,
       entry: { preload: "./preload-hook.mjs" },
     });
-    writeJson(path.join(repoRoot, "modules", "beta", "module.json"), {
+    writeJson(path.join(runtimeRoot, "modules", "beta", "module.json"), {
       id: "beta",
       kind: "node-preload",
       enabledByDefault: false,
@@ -178,8 +182,8 @@ test("resolveActiveModuleIds 在配置缺失时应回退到 enabledByDefault", (
     });
 
     const active = resolveActiveModuleIds(
-      repoRoot,
-      path.join(repoRoot, "config", "missing.json"),
+      runtimeRoot,
+      path.join(runtimeRoot, "config", "missing.json"),
     );
     assert.deepEqual(active, ["alpha"]);
   } finally {

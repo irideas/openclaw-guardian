@@ -6,7 +6,7 @@
 # 3. 具体模块的匹配与执行留给统一的 Node preload 路由层
 #
 # 当前实现中，这个入口会给所有 `openclaw` 命令统一注入：
-# `NODE_OPTIONS=--import=<repo>/bootstrap/node-preload-entry.mjs`
+# `NODE_OPTIONS=--import=<runtime>/bootstrap/node-preload-entry.mjs`
 #
 # 然后由 `node-preload-entry.mjs` 自己判断：
 # - 当前命令是否命中某个模块
@@ -17,11 +17,18 @@ if [[ -n "${__OPENCLAW_LOCAL_OVERRIDES_BOOTSTRAP_LOADED:-}" ]]; then
 fi
 __OPENCLAW_LOCAL_OVERRIDES_BOOTSTRAP_LOADED=1
 
-# 这些路径都是统一入口自己的运行时上下文。
-# 后续真正执行命令时，会把它们继续传给 Node preload 层，
-# 从而让 shell 包装层和 Node 运行时共享同一套目录语义。
+# 这里要同时区分两层目录：
+# 1. `runtimeRoot`
+#    真实运行时目录，里面只有 `bootstrap/`、`config/`、`modules/`
+# 2. `repoRoot`
+#    工程仓库根目录，里面还会有 `test/`、`docs/`、`.github/`
+#
+# `~/.openclaw/local-overrides` 会软链接到 `runtimeRoot`，
+# 所以运行时代码必须围绕 `runtimeRoot` 来推导路径，
+# 不能再假设仓库根和运行时根是同一个目录。
 __openclaw_local_overrides_bootstrap_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-__openclaw_local_overrides_repo_root="$(cd "${__openclaw_local_overrides_bootstrap_dir}/.." && pwd)"
+__openclaw_local_overrides_runtime_root="$(cd "${__openclaw_local_overrides_bootstrap_dir}/.." && pwd)"
+__openclaw_local_overrides_repo_root="$(cd "${__openclaw_local_overrides_runtime_root}/.." && pwd)"
 __openclaw_local_overrides_home="$(cd "${__openclaw_local_overrides_repo_root}/.." && pwd)"
 __openclaw_local_overrides_preload_path="${__openclaw_local_overrides_bootstrap_dir}/node-preload-entry.mjs"
 __openclaw_local_overrides_log_dir="${OPENCLAW_LOCAL_OVERRIDES_LOG_DIR:-${__openclaw_local_overrides_home}/logs/local-overrides}"
@@ -103,6 +110,7 @@ openclaw() {
   NODE_OPTIONS="${node_options}" \
   OPENCLAW_LOCAL_OVERRIDES_HOME="${__openclaw_local_overrides_home}" \
   OPENCLAW_LOCAL_OVERRIDES_REPO_ROOT="${__openclaw_local_overrides_repo_root}" \
+  OPENCLAW_LOCAL_OVERRIDES_RUNTIME_ROOT="${__openclaw_local_overrides_runtime_root}" \
   OPENCLAW_LOCAL_OVERRIDES_LOG_DIR="${__openclaw_local_overrides_log_dir}" \
   command "${real_bin}" "$@"
 }

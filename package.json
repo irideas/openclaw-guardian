@@ -1,6 +1,6 @@
 {
   "name": "openclaw-local-overrides",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Local override framework and modules for OpenClaw.",
   "private": true,
   "license": "MIT",

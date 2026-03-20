@@ -57,7 +57,7 @@
 
 ### 当前对应
 
-- [module-runtime.test.mjs](./test/module-runtime.test.mjs)
+- [module-runtime.test.mjs](../test/module-runtime.test.mjs)
 
 ## 2. Integration-Local
 
@@ -91,7 +91,7 @@
 
 ### 当前对应
 
-- [openai-codex-auth-proxy.integration.test.mjs](./test/openai-codex-auth-proxy.integration.test.mjs)
+- [openai-codex-auth-proxy.integration.test.mjs](../test/openai-codex-auth-proxy.integration.test.mjs)
 
 ### 结论
 

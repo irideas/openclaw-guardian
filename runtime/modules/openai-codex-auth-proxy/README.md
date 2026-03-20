@@ -19,9 +19,9 @@ CLI 阶段的 `code -> token` 交换失败的问题。
 
 当前版本采用统一框架：
 
-1. `bootstrap/bash-init.bash`
+1. `runtime/bootstrap/bash-init.bash`
    负责统一接管 `openclaw` 命令
-2. `bootstrap/node-preload-entry.mjs`
+2. `runtime/bootstrap/node-preload-entry.mjs`
    负责读取配置并路由模块
 3. 本模块的 [module.json](./module.json)
    负责声明匹配规则
@@ -88,6 +88,13 @@ CLI 阶段的 `code -> token` 交换失败的问题。
 
 启用配置位置：
 [enabled-modules.json](../../config/enabled-modules.json)
+
+如果你查看的是 Git 仓库源码，而不是运行时软链接目录，
+那么这个文件在仓库中的实际位置是：
+
+```text
+runtime/config/enabled-modules.json
+```
 
 ## 日志
 
@@ -171,7 +178,7 @@ export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
 
 人工 E2E 清单见：
 
-- [MANUAL-E2E.md](../../MANUAL-E2E.md)
+- [MANUAL-E2E.md](../../../docs/MANUAL-E2E.md)
 
 这里保留 `OPENCLAW_PROXY_PRELOAD_DISABLE`，
 主要是为了兼容既有调试习惯。
@@ -182,5 +189,5 @@ export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
 
 相关信息见：
 
-- [CHANGELOG.md](../../CHANGELOG.md)
-- [AGENTS.md](../../AGENTS.md)
+- [CHANGELOG.md](../../../CHANGELOG.md)
+- [AGENTS.md](../../../AGENTS.md)

@@ -4,41 +4,45 @@
 
 当前版本已经从“每个方案单独接入”收敛为：
 
-- 一个统一 `bootstrap` 入口
-- 一组可启停的 `modules`
-- 一份集中配置 `config/enabled-modules.json`
+- 一个统一 `runtime/bootstrap` 入口
+- 一组可启停的 `runtime/modules`
+- 一份集中配置 `runtime/config/enabled-modules.json`
 
-当前仓库版本：`0.6.0`
+当前仓库版本：`0.7.0`
 
 版本演进请参考：
 
 - [CHANGELOG.md](./CHANGELOG.md)
 - [AGENTS.md](./AGENTS.md)
-- [TESTING.md](./TESTING.md)
-- [MANUAL-E2E.md](./MANUAL-E2E.md)
+- [TESTING.md](./docs/TESTING.md)
+- [MANUAL-E2E.md](./docs/MANUAL-E2E.md)
 
 ## 目录结构
 
 ```text
-local-overrides/
+openclaw-local-overrides/
   .github/
     workflows/
       test.yml
   AGENTS.md
   CHANGELOG.md
   LICENSE
-  bootstrap/
-    bash-init.bash
-    logger.mjs
-    module-runtime.mjs
-    node-preload-entry.mjs
-  config/
-    enabled-modules.json
-  modules/
-    openai-codex-auth-proxy/
-      module.json
-      preload-hook.mjs
-      README.md
+  docs/
+    MANUAL-E2E.md
+    TESTING.md
+  runtime/
+    bootstrap/
+      bash-init.bash
+      logger.mjs
+      module-runtime.mjs
+      node-preload-entry.mjs
+    config/
+      enabled-modules.json
+    modules/
+      openai-codex-auth-proxy/
+        module.json
+        preload-hook.mjs
+        README.md
   test/
     *.test.mjs
   package.json
@@ -50,11 +54,13 @@ local-overrides/
 - 尽量不依赖临时调试目录
 - 统一接入方式，不为每个方案各写一条 `source`
 - 让“命令匹配、模块启停、日志套路”变成公共能力
+- 把“仓库根目录”和“运行时目录”明确分开
 - 把升级后的维护成本尽量留在本仓库内部
 
 ## 当前模块
 
-- [openai-codex-auth-proxy](./modules/openai-codex-auth-proxy/README.md)
+- [openai-codex-auth-proxy](./runtime/modules/openai-codex-auth-proxy/README.md)
+  运行时路径：`runtime/modules/openai-codex-auth-proxy`
   用于修正 `openclaw models auth login --provider openai-codex`
   在某些代理环境下的 `oauth/token` 交换异常。
 
@@ -62,11 +68,11 @@ local-overrides/
 
 每个模块目前遵循这一组公共约定：
 
-- `modules/<module-id>/module.json`
+- `runtime/modules/<module-id>/module.json`
   声明模块 id、匹配规则、入口文件和日志文件
-- `modules/<module-id>/preload-hook.mjs`
+- `runtime/modules/<module-id>/preload-hook.mjs`
   实现模块自己的 Node preload 行为
-- `config/enabled-modules.json`
+- `runtime/config/enabled-modules.json`
   负责决定哪些模块被统一运行时启用
 
 当前 `module.json` 已支持的字段有：
@@ -84,13 +90,27 @@ local-overrides/
 
 ## 安装步骤
 
-### 1. 克隆仓库
+### 1. 克隆仓库到工程目录
 
 ```bash
-git clone git@github.com:irideas/openclaw-local-overrides.git "$HOME/.openclaw/local-overrides"
+git clone git@github.com:irideas/openclaw-local-overrides.git "$HOME/.openclaw/openclaw-local-overrides"
 ```
 
-### 2. 在 Shell 启动文件中接入统一入口
+### 2. 建立运行时软链接
+
+运行时目录固定使用：
+
+```text
+$HOME/.openclaw/local-overrides
+```
+
+但这个目录不直接承载整个 Git 仓库，而是软链接到仓库内的 `runtime/`：
+
+```bash
+ln -sfn "$HOME/.openclaw/openclaw-local-overrides/runtime" "$HOME/.openclaw/local-overrides"
+```
+
+### 3. 在 Shell 启动文件中接入统一入口
 
 在 `~/.bash_profile` 中增加：
 
@@ -99,13 +119,13 @@ git clone git@github.com:irideas/openclaw-local-overrides.git "$HOME/.openclaw/l
   source "$HOME/.openclaw/local-overrides/bootstrap/bash-init.bash"
 ```
 
-### 3. 重新加载 Shell
+### 4. 重新加载 Shell
 
 ```bash
 source ~/.bash_profile
 ```
 
-### 4. 配置模块启停覆盖
+### 5. 配置模块启停覆盖
 
 编辑：
 
@@ -132,11 +152,12 @@ $HOME/.openclaw/local-overrides/config/enabled-modules.json
 因此配置求值顺序是：
 
 1. 先发现 `modules/` 下所有模块
+   这里的 `modules/` 指 `runtime/modules/`
 2. 先取所有 `enabledByDefault: true` 的模块
 3. 再合并 `enabledModules`
 4. 最后减去 `disabledModules`
 
-### 5. 验证统一接入是否生效
+### 6. 验证统一接入是否生效
 
 ```bash
 type -a openclaw
@@ -156,22 +177,22 @@ tail -n 20 "$HOME/.openclaw/logs/local-overrides/runtime.log"
 
 ## 运行原理
 
-1. `bootstrap/bash-init.bash`
+1. `runtime/bootstrap/bash-init.bash`
    在 shell 中接管 `openclaw`
 2. 每次执行 `openclaw ...` 时，
-   统一注入 `bootstrap/node-preload-entry.mjs`
-3. `node-preload-entry.mjs`
-   发现模块并读取 `config/enabled-modules.json`
+   统一注入 `runtime/bootstrap/node-preload-entry.mjs`
+3. `runtime/bootstrap/node-preload-entry.mjs`
+   发现模块并读取 `runtime/config/enabled-modules.json`
 4. 它根据当前 `process.argv`
    与默认启用规则求值得到候选模块
 5. 命中的模块再加载自己的 `preload-hook.mjs`
 
 因此后续新增模块时，只需要：
 
-- 增加 `modules/<module-id>/module.json`
-- 增加 `modules/<module-id>/preload-hook.mjs`
+- 增加 `runtime/modules/<module-id>/module.json`
+- 增加 `runtime/modules/<module-id>/preload-hook.mjs`
 - 按需设置 `enabledByDefault`
-- 如有需要，再在 `enabled-modules.json` 中显式启用或禁用
+- 如有需要，再在 `runtime/config/enabled-modules.json` 中显式启用或禁用
 
 不需要再修改 `~/.bash_profile`
 
@@ -212,7 +233,7 @@ export OPENCLAW_LOCAL_OVERRIDES_LOG_DIR=/tmp/openclaw-local-overrides-logs
 默认运行：
 
 ```bash
-cd "$HOME/.openclaw/local-overrides"
+cd "$HOME/.openclaw/openclaw-local-overrides"
 npm test
 ```
 
@@ -246,7 +267,7 @@ export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
 - 模块发现与默认启用策略
 - 统一 preload 路由
 - 统一 bash 入口到 `openai-codex-auth-proxy` 的集成路径
-- 人工 E2E 清单见 [MANUAL-E2E.md](./MANUAL-E2E.md)
+- 人工 E2E 清单见 [MANUAL-E2E.md](./docs/MANUAL-E2E.md)
 
 ## GitHub Actions
 

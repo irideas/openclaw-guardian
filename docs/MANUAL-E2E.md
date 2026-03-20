@@ -10,10 +10,10 @@
 
 当你修改了以下任一内容时，建议执行一次人工 E2E：
 
-- `bootstrap/bash-init.bash`
-- `bootstrap/node-preload-entry.mjs`
-- `modules/openai-codex-auth-proxy/module.json`
-- `modules/openai-codex-auth-proxy/preload-hook.mjs`
+- `runtime/bootstrap/bash-init.bash`
+- `runtime/bootstrap/node-preload-entry.mjs`
+- `runtime/modules/openai-codex-auth-proxy/module.json`
+- `runtime/modules/openai-codex-auth-proxy/preload-hook.mjs`
 - 与代理接管、`curl fallback`、日志路径、运行时路由相关的核心逻辑
 
 ## 前置条件
@@ -115,4 +115,3 @@ $HOME/.openclaw/agents/main/agent/auth-profiles.json
 2. CLI 没有报错退出
 3. 模块日志里出现 `curl_fallback_succeeded` 且状态为 `200`
 4. `auth-profiles.json` 里对应 profile 已更新
-

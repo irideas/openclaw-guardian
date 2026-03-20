@@ -24,6 +24,7 @@ import {
 // 而不需要再为每个方案单独接一条 shell `source`。
 
 const RUNTIME_PATHS = resolveRuntimePaths();
+const RUNTIME_ROOT = RUNTIME_PATHS.runtimeRoot;
 const REPO_ROOT = RUNTIME_PATHS.repoRoot;
 const OPENCLAW_HOME = RUNTIME_PATHS.openclawHome;
 const LOG_DIR = RUNTIME_PATHS.logDir;
@@ -91,8 +92,8 @@ async function main() {
   const args = process.argv.slice(2);
   const forcedModules = parseForcedModules();
   const configPath = RUNTIME_PATHS.configPath;
-  const discoveredModules = discoverModuleManifests(REPO_ROOT);
-  const activeModuleIds = resolveActiveModuleIds(REPO_ROOT, configPath);
+  const discoveredModules = discoverModuleManifests(RUNTIME_ROOT);
+  const activeModuleIds = resolveActiveModuleIds(RUNTIME_ROOT, configPath);
   const activeSet = new Set(activeModuleIds);
 
   // `runtime_loaded` 记录的是本次进程级调度上下文。
@@ -141,7 +142,7 @@ async function main() {
 
     // 到这里说明模块已经满足“应该尝试激活”的条件，
     // 后续的 schema 校验和模块执行交给 `activateModule()`。
-    const moduleDir = path.join(REPO_ROOT, "modules", moduleId);
+    const moduleDir = path.join(RUNTIME_ROOT, "modules", moduleId);
     await activateModule(moduleId, manifest, moduleDir);
   }
 }
