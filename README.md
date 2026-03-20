@@ -2,25 +2,44 @@
 
 这个仓库用于存放不会直接修改上游安装包、但又需要长期保留的本地覆盖层。
 
-当前包含：
+当前版本已经从“每个方案单独接入”收敛为：
 
-- [openai-codex-auth-proxy](./openai-codex-auth-proxy/README.md)
-  用于修正 `openclaw models auth login --provider openai-codex` 在某些代理环境下
-  可能出现的 `oauth/token` 交换异常。
-  当前实现采用“两层修复”：
-  `EnvHttpProxyAgent` 负责接管全局代理感知，
-  `curl fallback` 负责兜住 `https://auth.openai.com/oauth/token` 这一已知异常端点。
+- 一个统一 `bootstrap` 入口
+- 一组可启停的 `modules`
+- 一份集中配置 `config/enabled-modules.json`
+
+## 目录结构
+
+```text
+local-overrides/
+  bootstrap/
+    bash-init.bash
+    logger.mjs
+    node-preload-entry.mjs
+  config/
+    enabled-modules.json
+  modules/
+    openai-codex-auth-proxy/
+      module.json
+      preload-hook.mjs
+      README.md
+```
 
 ## 设计原则
 
 - 不直接修改全局安装的 `openclaw`
 - 尽量不依赖临时调试目录
-- 尽量把作用范围收窄到具体入口
-- 尽量让升级后的维护成本留在本仓库内部
+- 统一接入方式，不为每个方案各写一条 `source`
+- 让“命令匹配、模块启停、日志套路”变成公共能力
+- 把升级后的维护成本尽量留在本仓库内部
+
+## 当前模块
+
+- [openai-codex-auth-proxy](./modules/openai-codex-auth-proxy/README.md)
+  用于修正 `openclaw models auth login --provider openai-codex`
+  在某些代理环境下的 `oauth/token` 交换异常。
 
 ## 安装步骤
-
-以下步骤以 Bash 环境为例。
 
 ### 1. 克隆仓库
 
@@ -28,39 +47,91 @@
 git clone git@github.com:irideas/openclaw-local-overrides.git "$HOME/.openclaw/local-overrides"
 ```
 
-### 2. 选择需要启用的覆盖模块
+### 2. 在 Shell 启动文件中接入统一入口
 
-当前仓库提供的模块有：
-
-- `openai-codex-auth-proxy`
-
-每个模块目录都自带单独的 `README.md`，说明其适用场景、接入方式和回滚方式。
-
-### 3. 在 Shell 启动文件中接入模块
-
-以 `openai-codex-auth-proxy` 为例，可在 `~/.bash_profile` 中增加：
+在 `~/.bash_profile` 中增加：
 
 ```bash
-[ -f "$HOME/.openclaw/local-overrides/openai-codex-auth-proxy/bash-init.bash" ] && \
-  source "$HOME/.openclaw/local-overrides/openai-codex-auth-proxy/bash-init.bash"
+[ -f "$HOME/.openclaw/local-overrides/bootstrap/bash-init.bash" ] && \
+  source "$HOME/.openclaw/local-overrides/bootstrap/bash-init.bash"
 ```
 
-### 4. 重新加载 Shell
+### 3. 重新加载 Shell
 
 ```bash
 source ~/.bash_profile
 ```
 
-### 5. 验证接入是否生效
+### 4. 配置启用模块
+
+编辑：
+
+```text
+$HOME/.openclaw/local-overrides/config/enabled-modules.json
+```
+
+当前默认启用：
+
+```json
+{
+  "enabledModules": ["openai-codex-auth-proxy"]
+}
+```
+
+### 5. 验证统一接入是否生效
 
 ```bash
 type -a openclaw
 ```
 
-如果模块使用了同名 shell 包装，输出里通常会先看到：
+如果接入成功，输出中通常会先看到：
 
 ```text
 openclaw is a function
 ```
 
-具体的验证命令和预期结果，请参考对应模块文档。
+然后可继续检查运行日志：
+
+```bash
+tail -n 20 "$HOME/.openclaw/logs/local-overrides/runtime.log"
+```
+
+## 运行原理
+
+1. `bootstrap/bash-init.bash`
+   在 shell 中接管 `openclaw`
+2. 每次执行 `openclaw ...` 时，
+   统一注入 `bootstrap/node-preload-entry.mjs`
+3. `node-preload-entry.mjs`
+   读取 `config/enabled-modules.json`
+4. 它根据当前 `process.argv`
+   匹配各模块的 `module.json`
+5. 命中的模块再加载自己的 `preload-hook.mjs`
+
+因此后续新增模块时，只需要：
+
+- 增加 `modules/<module-id>/module.json`
+- 增加 `modules/<module-id>/preload-hook.mjs`
+- 在 `enabled-modules.json` 中启用
+
+不需要再修改 `~/.bash_profile`
+
+## 日志
+
+统一运行日志：
+
+```text
+$HOME/.openclaw/logs/local-overrides/runtime.log
+```
+
+模块日志：
+
+```text
+$HOME/.openclaw/logs/local-overrides/<module-log-file>
+```
+
+例如当前模块会写入：
+
+```text
+$HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log
+```
