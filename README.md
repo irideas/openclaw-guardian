@@ -2,15 +2,13 @@
 
 这个仓库用于存放不会直接修改上游安装包、但又需要长期保留的本地覆盖层。
 
-当前版本已经从“每个方案单独接入”收敛为：
-
 - 一个统一 `runtime/bootstrap` 入口
 - 一组可启停的 `runtime/modules`
 - 一份集中配置 `runtime/config/enabled-modules.json`
 
-当前仓库版本：`0.7.0`
+仓库版本：`0.7.1`
 
-版本演进请参考：
+相关文档：
 
 - [CHANGELOG.md](./CHANGELOG.md)
 - [AGENTS.md](./AGENTS.md)
@@ -52,12 +50,12 @@ openclaw-local-overrides/
 
 - 不直接修改全局安装的 `openclaw`
 - 尽量不依赖临时调试目录
-- 统一接入方式，不为每个方案各写一条 `source`
+- 统一接入方式
 - 让“命令匹配、模块启停、日志套路”变成公共能力
 - 把“仓库根目录”和“运行时目录”明确分开
 - 把升级后的维护成本尽量留在本仓库内部
 
-## 当前模块
+## 模块
 
 - [openai-codex-auth-proxy](./runtime/modules/openai-codex-auth-proxy/README.md)
   运行时路径：`runtime/modules/openai-codex-auth-proxy`
@@ -66,7 +64,7 @@ openclaw-local-overrides/
 
 ## 模块约定
 
-每个模块目前遵循这一组公共约定：
+每个模块遵循这一组公共约定：
 
 - `runtime/modules/<module-id>/module.json`
   声明模块 id、匹配规则、入口文件和日志文件
@@ -75,7 +73,7 @@ openclaw-local-overrides/
 - `runtime/config/enabled-modules.json`
   负责决定哪些模块被统一运行时启用
 
-当前 `module.json` 已支持的字段有：
+`module.json` 已支持的字段有：
 
 - `id`
 - `kind`
@@ -140,7 +138,7 @@ source ~/.bash_profile
 $HOME/.openclaw/local-overrides/config/enabled-modules.json
 ```
 
-当前配置文件的职责是“覆盖默认行为”，例如：
+配置文件的职责是“覆盖默认行为”，例如：
 
 ```json
 {
@@ -149,7 +147,7 @@ $HOME/.openclaw/local-overrides/config/enabled-modules.json
 }
 ```
 
-实际的默认启用状态由各模块自己的 `module.json` 决定：
+默认启用状态由各模块自己的 `module.json` 决定：
 
 - `enabledByDefault: true`
   表示模块在未被显式禁用时默认生效
@@ -217,7 +215,7 @@ $HOME/.openclaw/logs/local-overrides/runtime.log
 $HOME/.openclaw/logs/local-overrides/<module-log-file>
 ```
 
-例如当前模块会写入：
+例如本仓库的 `openai-codex-auth-proxy` 模块会写入：
 
 ```text
 $HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log
@@ -231,7 +229,7 @@ export OPENCLAW_LOCAL_OVERRIDES_LOG_DIR=/tmp/openclaw-local-overrides-logs
 
 ## 测试
 
-当前仓库已经包含：
+仓库包含：
 
 - 公共运行时单测
 - `openai-codex-auth-proxy` 的集成测试

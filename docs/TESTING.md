@@ -203,7 +203,7 @@ openclaw models auth login --provider openai-codex
 > 把真实网络行为放进 integration，
 > 把完整授权闭环留给 manual-e2e
 
-## 对当前仓库的建议
+## 测试执行方式
 
 当前推荐的测试划分如下：
 
@@ -254,20 +254,13 @@ openclaw models auth login --provider openai-codex
 
 - [MANUAL-E2E.md](./MANUAL-E2E.md)
 
-## 后续建议的工程动作
+## 结论
 
-在你确认这份策略后，下一步建议做这些调整：
+推荐的执行方式是：
 
-1. 把 README / CI / package scripts 中的测试术语统一
-   不再把需要代理的测试混称为 `unit`
-
-2. 保持 `unit` 默认自动执行
-
-3. 把 `integration` 明确标成：
-   - 需要代理
-   - 可选执行
-   - 不作为每次 push 的硬门禁
-
-4. 为 `manual-e2e` 补一份明确的人工验证清单
-
-这样仓库的测试模型会更诚实，也更稳定。
+1. `npm test`
+   用于默认自动化回归
+2. `npm run test:integration`
+   用于验证真实代理链路
+3. `MANUAL-E2E`
+   用于验证完整 OAuth 成功与 token 落盘
