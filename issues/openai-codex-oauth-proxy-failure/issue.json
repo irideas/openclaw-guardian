@@ -1,10 +1,10 @@
 {
   "id": "openai-codex-oauth-proxy-failure",
   "alias": "codex-auth",
-  "title": "OpenAI Codex OAuth token exchange fails behind HTTP proxy",
+  "title": "OpenClaw fails to persist openai-codex auth after browser authorization",
   "category": "auth",
   "severity": "error",
-  "summary": "Fix OpenAI Codex OAuth token exchange behind HTTP proxy environments.",
+  "summary": "After browser authorization succeeds, OpenClaw may still fail to exchange the final token and write openai-codex auth credentials, often surfacing 403 unsupported_country_region_territory.",
   "enabledByDefault": true,
   "appliesTo": {
     "openclaw": {

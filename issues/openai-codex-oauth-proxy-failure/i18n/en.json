@@ -1,6 +1,6 @@
 {
-  "meta.title": "OpenAI Codex OAuth token exchange fails behind HTTP proxy",
-  "meta.summary": "OpenAI Codex OAuth token exchange may fail behind HTTP proxy environments.",
-  "summary": "OpenAI Codex OAuth token exchange may fail behind HTTP proxy environments.",
+  "meta.title": "OpenClaw fails to persist openai-codex auth after browser authorization",
+  "meta.summary": "After browser authorization succeeds, OpenClaw may still fail to exchange the final token and write openai-codex auth credentials.",
+  "summary": "After browser authorization succeeds, OpenClaw may still fail to exchange the final token and write openai-codex auth credentials.",
   "suggestion.check_proxy": "Check the configured HTTP proxy and retry the login flow."
 }

@@ -1,44 +1,80 @@
 # `openai-codex-oauth-proxy-failure`
 
-## Issue 定位
+## 一句话说明
 
-这是 `openclaw-guardian` 当前内置的一个 `auth` 类 issue。
-
-当前 alias：
-
-- `codex-auth`
-
-它描述的问题现象是：
+这个 issue 处理的是：
 
 ```bash
 openclaw models auth login --provider openai-codex
 ```
 
-在某些 HTTP 代理环境下：
+浏览器授权看起来已经完成，但 `OpenClaw` 最终没有成功把 `openai-codex` 的认证信息写入本地。
 
-- 浏览器授权已经成功
-- `localhost` 回调也已经成功
-- 但 CLI 阶段的 `oauth/token` 交换仍然失败
+当前 alias：
 
-常见表现包括：
+- `codex-auth`
 
+## 现象
+
+典型执行路径是：
+
+1. 终端拉起浏览器授权
+2. 浏览器完成登录与授权
+3. `localhost` 回调成功
+4. CLI 最后一步仍失败，没有写入认证信息
+
+常见报错包括：
+
+- `API Error: Status Code 403`
 - `unsupported_country_region_territory`
+- `Country, region, or territory not supported`
 - `fetch failed`
-- 代理链路明明可用，但 `openai-codex` OAuth 仍不能落 token
 
-## 当前能力面
+从用户视角看，真正的问题不是“浏览器没打开”，而是：
 
-本 issue 当前启用的能力面是：
+- 浏览器授权成功了
+- 但最终 token 没换下来
+- 所以本地认证配置没有更新
+
+## 归因分析
+
+这个 issue 关注的是一类已经验证过的失败路径：
+
+- 浏览器阶段没问题
+- 本地回调阶段没问题
+- 失败发生在 CLI 侧对 `https://auth.openai.com/oauth/token` 的最终交换
+
+在我们已经复现和验证过的场景里，常见归因包括：
+
+1. `OpenClaw` 的这条登录链路没有按预期走到可用的 HTTP 代理出口
+2. 裸 `fetch(...)` 与 `curl` 在同一代理环境下行为不同
+3. 目标端点返回 `403 unsupported_country_region_territory`
+4. 因为最终 token 交换失败，导致认证信息无法写入本地
+
+也就是说，这个 issue 的核心现象是“认证写入失败”，而当前缓解手段聚焦在其中一条高概率根因：
+
+- 最终 token 交换阶段的网络链路不稳定或不正确
+
+## guardian 的解决方案
+
+这个 issue 当前启用的能力面是：
 
 - `mitigation`
 
-也就是说，它当前不是通过前置检查或显式修复命令解决，
-而是在命中的运行时链路里做非常窄的修复。
+也就是说，它不会提前修改本地文件，也不会提供显式 `repair`，而是在命中的执行链路里做一层非常窄的运行中缓解。
 
-在 [issue.json](./issue.json) 中，这一点体现在：
+在 [mitigation.mjs](./mitigation.mjs) 里，当前方案分两层：
 
-- `capabilities.mitigation = true`
-- `entry.mitigation = "./mitigation.mjs"`
+1. 为当前 `openclaw` 进程安装 `EnvHttpProxyAgent`
+   让裸 `fetch(...)` 更可靠地继承 `HTTP_PROXY` / `HTTPS_PROXY`
+2. 只对 `https://auth.openai.com/oauth/token`
+   增加极小范围的 `curl fallback`
+
+这个方案的目标不是改写整个 `OpenClaw` 网络栈，而是只修复这条已经明确定位的问题链路：
+
+- 浏览器授权后
+- 最终 token 交换
+- 本地认证信息写入
 
 ## 触发条件
 
@@ -62,41 +98,28 @@ openclaw models auth login --provider openai-codex
 
 如果当前 `OpenClaw` 版本不在这个范围内，guardian 不会激活本 issue 的 `mitigation`。
 
-## 当前修复思路
+## 使用方式
 
-这个 issue 的 `mitigation` 实现位于 [mitigation.mjs](./mitigation.mjs)。
-
-当前修复分两层：
-
-1. 安装 `EnvHttpProxyAgent`
-   让当前 `openclaw` 进程中的裸 `fetch(...)` 能继承 `HTTP_PROXY` / `HTTPS_PROXY`
-2. 只对 `https://auth.openai.com/oauth/token`
-   增加非常窄的 `curl fallback`
-
-这样做的目的有两个：
-
-- 尽量不扩大影响范围
-- 只修复这条已确认异常的 OAuth token 交换链路
-
-## 接入方式
-
-统一接入入口是：
+日常使用时，不需要单独执行 guardian 命令。  
+只要你已经接入：
 
 - `bridge/bootstrap/bash-init.bash`
-- `bridge/bootstrap/node-entry.mjs`
 
-它们负责：
+那么正常运行：
 
-1. 接管 `openclaw` 命令
-2. 发现可用 issue
-3. 读取 `enabled-issues.json`
-4. 在命中时加载本 issue 的 [mitigation.mjs](./mitigation.mjs)
+```bash
+openclaw models auth login --provider openai-codex
+```
 
-运行时启停覆盖文件是：
+guardian 就会在后台自动决定是否对这次命令启用 `mitigation`。
 
-- `bridge/config/enabled-issues.json`
+如果只是想查看当前 issue 状态，可以执行：
 
-## 日志
+```bash
+guardian issue show codex-auth
+```
+
+## 日志与验证
 
 这个 issue 的日志默认写入：
 
@@ -104,7 +127,13 @@ openclaw models auth login --provider openai-codex
 $HOME/.openclaw/logs/guardian/openai-codex-oauth-proxy-failure.log
 ```
 
-常见事件包括：
+统一入口日志写入：
+
+```text
+$HOME/.openclaw/logs/guardian/guardian.log
+```
+
+重点事件包括：
 
 - `issue_activate_start`
 - `preload_loaded`
@@ -114,11 +143,15 @@ $HOME/.openclaw/logs/guardian/openai-codex-oauth-proxy-failure.log
 - `curl_fallback_succeeded`
 - `curl_fallback_failed`
 
-统一运行时日志仍写入：
+如果要验证这个 issue 是否真正解决了问题，应重点看：
 
-```text
-$HOME/.openclaw/logs/guardian/guardian.log
-```
+1. `openclaw models auth login --provider openai-codex` 是否最终成功退出
+2. issue 日志里是否出现 `curl_fallback_succeeded`
+3. `auth-profiles.json` 是否真的写入了新的认证信息
+
+更完整的人工闭环见：
+
+- [MANUAL-E2E.md](../../docs/MANUAL-E2E.md)
 
 ## 开关与调试
 
@@ -128,7 +161,7 @@ $HOME/.openclaw/logs/guardian/guardian.log
 OPENCLAW_GUARDIAN_DISABLE=1 openclaw models auth login --provider openai-codex
 ```
 
-关闭本 issue 的 mitigation 修复：
+关闭本 issue 的缓解逻辑：
 
 ```bash
 OPENCLAW_GUARDIAN_CODEX_AUTH_DISABLE=1 openclaw models auth login --provider openai-codex
@@ -143,53 +176,11 @@ OPENCLAW_GUARDIAN_CODEX_AUTH_CURL_FALLBACK_DISABLE=1 openclaw models auth login 
 强制在非匹配命令上激活本 issue，便于调试：
 
 ```bash
-OPENCLAW_GUARDIAN_FORCE_ISSUES=openai-codex-oauth-proxy-failure node ...
+OPENCLAW_GUARDIAN_FORCE_ISSUES=codex-auth node ...
 ```
 
-## 多语言
+## 相关文档
 
-本 issue 的用户可见文案位于：
-
-- [i18n/zh-CN.json](./i18n/zh-CN.json)
-- [i18n/en.json](./i18n/en.json)
-
-当前运行时会优先跟随：
-
-- `OPENCLAW_GUARDIAN_LANG`
-- `LC_ALL`
-- `LC_MESSAGES`
-- `LANG`
-
-无法识别时兜底为 `en`。
-
-## 测试
-
-自动化测试分三层：
-
-1. 单测
-   覆盖公共 issue 发现、匹配、启停与路径求值逻辑
-2. 集成测试
-   验证统一 mitigation 路由与本 issue 的假 `oauth/token` 交换
-3. 人工 E2E
-   验证真实浏览器授权、真实 token 交换与真实落盘
-
-在仓库根目录执行：
-
-```bash
-npm test
-```
-
-执行需要真实 HTTP 代理的集成测试：
-
-```bash
-export HTTP_PROXY=http://<your-http-proxy-host>:<port>
-export HTTPS_PROXY=http://<your-http-proxy-host>:<port>
-unset ALL_PROXY
-unset all_proxy
-npm run test:integration
-```
-
-进一步说明见：
-
+- [README.md](/Users/irideas/.openclaw/openclaw-guardian/README.md)
 - [TESTING.md](../../docs/TESTING.md)
 - [MANUAL-E2E.md](../../docs/MANUAL-E2E.md)

@@ -1,6 +1,6 @@
 {
-  "meta.title": "OpenAI Codex OAuth 在 HTTP 代理环境下发生 token 交换失败",
-  "meta.summary": "OpenAI Codex OAuth 在某些 HTTP 代理环境下可能发生 token 交换失败。",
-  "summary": "OpenAI Codex OAuth 在某些 HTTP 代理环境下可能发生 token 交换失败。",
+  "meta.title": "OpenClaw 在浏览器授权后写入 openai-codex 认证信息失败",
+  "meta.summary": "浏览器授权成功后，OpenClaw 仍可能在最终 token 交换或认证信息写入阶段失败。",
+  "summary": "浏览器授权成功后，OpenClaw 仍可能在最终 token 交换或认证信息写入阶段失败。",
   "suggestion.check_proxy": "请检查当前配置的 HTTP 代理后再重试登录流程。"
 }

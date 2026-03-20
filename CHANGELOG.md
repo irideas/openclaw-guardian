@@ -2,6 +2,14 @@
 
 本文档记录 `openclaw-guardian` 从 `1.0.0` 开始的正式版本演进。
 
+## 1.0.1 - 2026-03-20
+
+### Changed
+
+- 修正 `openai-codex` issue 的 title / summary，使其准确描述“浏览器授权后最终认证写入失败”的现象
+- 重写仓库与 issue 级 README，统一按“现象 / 归因 / 解决方案 / 验证”组织
+- 更新 GitHub Actions workflow，改用 `actions/checkout@v6` 与 `actions/setup-node@v6`
+
 ## 1.0.0 - 2026-03-20
 
 ### Added

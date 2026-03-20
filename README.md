@@ -4,7 +4,7 @@
 它不替代上游，不重打包 `OpenClaw`，而是围绕真实环境里的运行时异常、配置冲突与可复现故障，
 提供一套可本地接入、可逐步下线、可独立维护的问题发现与修复机制。
 
-当前版本：`1.0.0`
+当前版本：`1.0.1`
 
 ## 这是什么
 
@@ -30,48 +30,49 @@
 - `repair`
   以显式、可审计的方式执行本地修复动作
 
-## 当前解决的问题
+## 当前内置 issue
 
 当前仓库已经内置两个 issue：
 
-- [openai-codex-oauth-proxy-failure](./issues/openai-codex-oauth-proxy-failure/README.md)
-- [plugins-feishu-duplicate-id](./issues/plugins-feishu-duplicate-id/README.md)
+### 1. [openai-codex-oauth-proxy-failure](./issues/openai-codex-oauth-proxy-failure/README.md)
 
-当前两个代表问题分别是：
+对应现象：
 
-```bash
-openclaw models auth login --provider openai-codex
-```
+- `openclaw models auth login --provider openai-codex`
+- 浏览器授权成功
+- 但最终没有把认证信息写入本地
 
-在某些 HTTP 代理环境下：
+常见报错：
 
-- 浏览器授权已经成功
-- 本地回调也已经成功
-- 但 CLI 阶段的 `oauth/token` 交换仍然失败
-
-典型症状包括：
-
+- `API Error: Status Code 403`
 - `unsupported_country_region_territory`
 - `fetch failed`
-- 明明代理可用，但 `OpenClaw` 的 `openai-codex` OAuth 流程仍无法完成
 
-这个 issue 当前主要通过 `mitigation` 能力面落地，
-即在命中的运行时链路上做非常窄的代理接管与 `curl fallback`。
+当前处理手段：
 
-以及：
+- `mitigation`
 
-```bash
-openclaw gateway restart
-openclaw plugins list
-```
+也就是在命中的执行链路里，对最终 token 交换阶段做非常窄的网络缓解。
 
-在本地额外存在 `feishu` 扩展时，可能出现：
+### 2. [plugins-feishu-duplicate-id](./issues/plugins-feishu-duplicate-id/README.md)
+
+对应现象：
+
+- `openclaw gateway restart`
+- `openclaw plugins list`
+- `openclaw plugins doctor`
+
+常见告警：
 
 - `plugin feishu: duplicate plugin id detected`
 - `plugins.allow is empty; discovered non-bundled plugins may auto-load`
 
-这个 issue 当前通过 `preflight + repair` 能力面落地，
-即先做命令前检测，再提供显式修复动作。
+当前处理手段：
+
+- `preflight`
+- `repair`
+
+也就是先在命令执行前检测本地冲突状态，再由用户显式执行修复。
 
 ## 为什么需要它
 
@@ -292,6 +293,27 @@ tail -n 20 "$HOME/.openclaw/logs/guardian/guardian.log"
 
 ```bash
 type -a guardian
+```
+
+## 发生问题时怎么用
+
+可以先列出当前 issue：
+
+```bash
+guardian issue list
+```
+
+查看某个 issue：
+
+```bash
+guardian issue show codex-auth
+guardian issue show feishu-dup
+```
+
+对支持显式修复的 issue，先看 dry-run：
+
+```bash
+guardian repair feishu-dup --dry-run
 ```
 
 ## 测试
