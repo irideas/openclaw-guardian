@@ -1,5 +1,7 @@
 {
   "id": "openai-codex-auth-proxy",
+  "kind": "node-preload",
+  "enabledByDefault": true,
   "description": "Fix OpenAI Codex OAuth token exchange behind HTTP proxy environments.",
   "match": {
     "argvAll": ["models", "auth", "login"],
@@ -8,8 +10,19 @@
   "entry": {
     "preload": "./preload-hook.mjs"
   },
+  "compat": {
+    "legacyShellInit": "../../openai-codex-auth-proxy/bash-init.bash",
+    "legacyPreload": "../../openai-codex-auth-proxy/env-proxy-preload.mjs"
+  },
+  "env": {
+    "variables": [
+      "OPENCLAW_PROXY_PRELOAD_DISABLE",
+      "OPENCLAW_PROXY_CURL_FALLBACK_DISABLE",
+      "OPENCLAW_PROXY_PRELOAD_STDERR",
+      "OPENCLAW_PROXY_PRELOAD_OPENCLAW_ROOT"
+    ]
+  },
   "logging": {
     "file": "openai-codex-auth-proxy.log"
   }
 }
-

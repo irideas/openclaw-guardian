@@ -2,9 +2,9 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createJsonlLogger } from "./logger.mjs";
 import {
-  readJson,
   resolveRuntimePaths,
-  resolveEnabledModules,
+  discoverModuleManifests,
+  resolveActiveModuleIds,
   resolveModuleLogPath,
   matchesManifest,
   parseForcedModules,
@@ -86,36 +86,27 @@ async function main() {
   const args = process.argv.slice(2);
   const forcedModules = parseForcedModules();
   const configPath = RUNTIME_PATHS.configPath;
-  const enabledModules = resolveEnabledModules(configPath);
+  const discoveredModules = discoverModuleManifests(REPO_ROOT);
+  const activeModuleIds = resolveActiveModuleIds(REPO_ROOT, configPath);
+  const activeSet = new Set(activeModuleIds);
 
   runtimeLog("runtime_loaded", {
     argv: process.argv,
     configPath,
-    enabledModules,
+    discoveredModules: discoveredModules.map(({ moduleId }) => moduleId),
+    activeModuleIds,
     forcedModules: Array.from(forcedModules),
   });
 
-  for (const moduleId of enabledModules) {
-    const moduleDir = path.join(REPO_ROOT, "modules", moduleId);
-    const manifestPath = path.join(moduleDir, "module.json");
-
-    let manifest;
-    try {
-      manifest = readJson(manifestPath);
-    } catch {
-      runtimeLog("module_skipped", {
-        moduleId,
-        reason: "manifest_missing",
-        manifestPath,
-      });
-      continue;
-    }
+  for (const { moduleId, manifestPath, manifest } of discoveredModules) {
     const forceMatch = forcedModules.has(moduleId);
-    const normalMatch = matchesManifest(manifest, args);
+    const activeByConfig = activeSet.has(moduleId);
+    const normalMatch = activeByConfig && manifest ? matchesManifest(manifest, args) : false;
 
     runtimeLog("module_evaluated", {
       moduleId,
       manifestPath,
+      activeByConfig,
       forceMatch,
       normalMatch,
     });
@@ -124,6 +115,16 @@ async function main() {
       continue;
     }
 
+    if (!manifest) {
+      runtimeLog("module_skipped", {
+        moduleId,
+        reason: "manifest_missing",
+        manifestPath,
+      });
+      continue;
+    }
+
+    const moduleDir = path.join(REPO_ROOT, "modules", moduleId);
     await activateModule(moduleId, manifest, moduleDir);
   }
 }

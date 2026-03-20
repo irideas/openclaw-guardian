@@ -1,6 +1,4 @@
 {
-  "enabledModules": [
-    "openai-codex-auth-proxy"
-  ]
+  "enabledModules": [],
+  "disabledModules": []
 }
-

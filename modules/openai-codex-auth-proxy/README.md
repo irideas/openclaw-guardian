@@ -42,10 +42,23 @@ CLI 阶段的 `code -> token` 交换失败的问题。
 
 其中当前用到的关键字段是：
 
+- `kind`
+- `enabledByDefault`
 - `match.argvAll`
 - `match.provider`
 - `entry.preload`
+- `compat.legacyShellInit`
+- `compat.legacyPreload`
+- `env.variables`
 - `logging.file`
+
+当前模块的策略是：
+
+- `kind = "node-preload"`
+- `enabledByDefault = true`
+
+这表示它属于统一运行时中的 Node preload 模块，
+并且在没有被 `disabledModules` 显式关闭时默认生效。
 
 ## 修复逻辑
 

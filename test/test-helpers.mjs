@@ -16,6 +16,18 @@ export function cleanupDir(dirPath) {
   fs.rmSync(dirPath, { recursive: true, force: true });
 }
 
+export function createTempRepoFixture() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-local-overrides-fixture-"));
+  fs.mkdirSync(path.join(root, "modules"), { recursive: true });
+  fs.mkdirSync(path.join(root, "config"), { recursive: true });
+  return root;
+}
+
+export function writeJson(filePath, value) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(value, null, 2), "utf8");
+}
+
 export function resolveProxyForTests() {
   return (
     process.env.OPENCLAW_PROXY_TEST_PROXY_URL ||
@@ -36,4 +48,3 @@ export function hasOpenClawBinary() {
   const result = runProcess("bash", ["-lc", "type -P openclaw"]);
   return result.status === 0 && Boolean(result.stdout.trim());
 }
-

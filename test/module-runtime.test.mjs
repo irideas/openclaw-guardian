@@ -1,14 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import path from "node:path";
 import {
+  discoverModuleManifests,
   extractProvider,
+  isEnabledByDefault,
   matchesManifest,
   parseForcedModules,
+  resolveActiveModuleIds,
   resolveModuleLogPath,
   resolveRuntimePaths,
   validateManifest,
 } from "../bootstrap/module-runtime.mjs";
+import { cleanupDir, createTempRepoFixture, writeJson } from "./test-helpers.mjs";
 
 test("resolveRuntimePaths 应当支持环境变量覆盖", () => {
   const paths = resolveRuntimePaths({
@@ -66,6 +71,7 @@ test("validateManifest 应当校验模块 id 与 preload 入口", () => {
   assert.deepEqual(
     validateManifest("openai-codex-auth-proxy", {
       id: "openai-codex-auth-proxy",
+      kind: "node-preload",
       entry: { preload: "./preload-hook.mjs" },
     }),
     { ok: true, reason: null },
@@ -74,9 +80,31 @@ test("validateManifest 应当校验模块 id 与 preload 入口", () => {
   assert.deepEqual(
     validateManifest("openai-codex-auth-proxy", {
       id: "other",
+      kind: "node-preload",
       entry: { preload: "./preload-hook.mjs" },
     }),
     { ok: false, reason: "manifest_id_mismatch" },
+  );
+});
+
+test("validateManifest 应当校验 kind 与 env/compat 字段", () => {
+  assert.deepEqual(
+    validateManifest("openai-codex-auth-proxy", {
+      id: "openai-codex-auth-proxy",
+      kind: "other-kind",
+      entry: { preload: "./preload-hook.mjs" },
+    }),
+    { ok: false, reason: "manifest_kind_invalid" },
+  );
+
+  assert.deepEqual(
+    validateManifest("openai-codex-auth-proxy", {
+      id: "openai-codex-auth-proxy",
+      kind: "node-preload",
+      enabledByDefault: "yes",
+      entry: { preload: "./preload-hook.mjs" },
+    }),
+    { ok: false, reason: "enabled_by_default_invalid" },
   );
 });
 
@@ -88,3 +116,73 @@ test("resolveModuleLogPath 应当按 manifest 指定的文件名输出", () => {
   assert.equal(logPath, path.join("/tmp/logs", "custom.log"));
 });
 
+test("isEnabledByDefault 应当识别默认启用模块", () => {
+  assert.equal(isEnabledByDefault({ enabledByDefault: true }), true);
+  assert.equal(isEnabledByDefault({ enabledByDefault: false }), false);
+  assert.equal(isEnabledByDefault({}), false);
+});
+
+test("discoverModuleManifests 与 resolveActiveModuleIds 应当支持默认启用和显式禁用", () => {
+  const repoRoot = createTempRepoFixture();
+
+  try {
+    writeJson(path.join(repoRoot, "modules", "alpha", "module.json"), {
+      id: "alpha",
+      kind: "node-preload",
+      enabledByDefault: true,
+      entry: { preload: "./preload-hook.mjs" },
+    });
+    writeJson(path.join(repoRoot, "modules", "beta", "module.json"), {
+      id: "beta",
+      kind: "node-preload",
+      enabledByDefault: false,
+      entry: { preload: "./preload-hook.mjs" },
+    });
+    fs.mkdirSync(path.join(repoRoot, "modules", "broken"), { recursive: true });
+    writeJson(path.join(repoRoot, "config", "enabled-modules.json"), {
+      enabledModules: ["beta"],
+      disabledModules: ["alpha"],
+    });
+
+    const discovered = discoverModuleManifests(repoRoot);
+    assert.deepEqual(
+      discovered.map((item) => item.moduleId),
+      ["alpha", "beta", "broken"],
+    );
+
+    const active = resolveActiveModuleIds(
+      repoRoot,
+      path.join(repoRoot, "config", "enabled-modules.json"),
+    );
+    assert.deepEqual(active, ["beta"]);
+  } finally {
+    cleanupDir(repoRoot);
+  }
+});
+
+test("resolveActiveModuleIds 在配置缺失时应回退到 enabledByDefault", () => {
+  const repoRoot = createTempRepoFixture();
+
+  try {
+    writeJson(path.join(repoRoot, "modules", "alpha", "module.json"), {
+      id: "alpha",
+      kind: "node-preload",
+      enabledByDefault: true,
+      entry: { preload: "./preload-hook.mjs" },
+    });
+    writeJson(path.join(repoRoot, "modules", "beta", "module.json"), {
+      id: "beta",
+      kind: "node-preload",
+      enabledByDefault: false,
+      entry: { preload: "./preload-hook.mjs" },
+    });
+
+    const active = resolveActiveModuleIds(
+      repoRoot,
+      path.join(repoRoot, "config", "missing.json"),
+    );
+    assert.deepEqual(active, ["alpha"]);
+  } finally {
+    cleanupDir(repoRoot);
+  }
+});

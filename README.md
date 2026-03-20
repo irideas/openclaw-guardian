@@ -53,9 +53,14 @@ local-overrides/
 当前 `module.json` 已支持的字段有：
 
 - `id`
+- `kind`
+- `enabledByDefault`
 - `match.argvAll`
 - `match.provider`
 - `entry.preload`
+- `compat.legacyShellInit`
+- `compat.legacyPreload`
+- `env.variables`
 - `logging.file`
 
 ## 安装步骤
@@ -81,7 +86,7 @@ git clone git@github.com:irideas/openclaw-local-overrides.git "$HOME/.openclaw/l
 source ~/.bash_profile
 ```
 
-### 4. 配置启用模块
+### 4. 配置模块启停覆盖
 
 编辑：
 
@@ -89,13 +94,28 @@ source ~/.bash_profile
 $HOME/.openclaw/local-overrides/config/enabled-modules.json
 ```
 
-当前默认启用：
+当前配置文件的职责是“覆盖默认行为”，例如：
 
 ```json
 {
-  "enabledModules": ["openai-codex-auth-proxy"]
+  "enabledModules": [],
+  "disabledModules": []
 }
 ```
+
+实际的默认启用状态由各模块自己的 `module.json` 决定：
+
+- `enabledByDefault: true`
+  表示模块在未被显式禁用时默认生效
+- `enabledByDefault: false`
+  表示模块必须显式加入 `enabledModules`
+
+因此配置求值顺序是：
+
+1. 先发现 `modules/` 下所有模块
+2. 先取所有 `enabledByDefault: true` 的模块
+3. 再合并 `enabledModules`
+4. 最后减去 `disabledModules`
 
 ### 5. 验证统一接入是否生效
 
@@ -131,7 +151,8 @@ tail -n 20 "$HOME/.openclaw/logs/local-overrides/runtime.log"
 
 - 增加 `modules/<module-id>/module.json`
 - 增加 `modules/<module-id>/preload-hook.mjs`
-- 在 `enabled-modules.json` 中启用
+- 按需设置 `enabledByDefault`
+- 如有需要，再在 `enabled-modules.json` 中显式启用或禁用
 
 不需要再修改 `~/.bash_profile`
 
@@ -184,3 +205,10 @@ npm test
 ```bash
 export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
 ```
+
+测试当前覆盖：
+
+- 模块 manifest 校验
+- 模块发现与默认启用策略
+- 统一 preload 路由
+- 统一 bash 入口到 `openai-codex-auth-proxy` 的集成路径

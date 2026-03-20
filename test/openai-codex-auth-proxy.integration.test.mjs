@@ -52,6 +52,7 @@ test("统一 preload 路由应能跑通 openai-codex-auth-proxy 的假 token 交
     const runtimeLog = fs.readFileSync(path.join(logDir, "runtime.log"), "utf8");
     const moduleLog = fs.readFileSync(path.join(logDir, "openai-codex-auth-proxy.log"), "utf8");
 
+    assert.match(runtimeLog, /"activeModuleIds":\["openai-codex-auth-proxy"\]/);
     assert.match(runtimeLog, /"forceMatch":true/);
     assert.match(moduleLog, /"event":"curl_fallback_succeeded".*"status":401/);
   } finally {
@@ -92,6 +93,7 @@ test("统一 bash 入口应能把 openclaw 目标命令路由到 openai-codex-au
     const runtimeLog = fs.readFileSync(path.join(logDir, "runtime.log"), "utf8");
     const moduleLog = fs.readFileSync(path.join(logDir, "openai-codex-auth-proxy.log"), "utf8");
 
+    assert.match(runtimeLog, /"activeByConfig":true/);
     assert.match(runtimeLog, /"normalMatch":true/);
     assert.match(moduleLog, /"event":"preload_activated"/);
   } finally {
