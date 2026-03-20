@@ -90,10 +90,17 @@ openclaw-local-overrides/
 
 ## 安装步骤
 
+下面示例中的 `<repo-dir>` 表示你自己选择的 Git 仓库存放目录。
+它可以是任意合适的位置，例如：
+
+- `$HOME/dev/openclaw-local-overrides`
+- `$HOME/workspace/openclaw-local-overrides`
+- `/opt/openclaw-local-overrides`
+
 ### 1. 克隆仓库到工程目录
 
 ```bash
-git clone git@github.com:irideas/openclaw-local-overrides.git "$HOME/.openclaw/openclaw-local-overrides"
+git clone git@github.com:irideas/openclaw-local-overrides.git "<repo-dir>"
 ```
 
 ### 2. 建立运行时软链接
@@ -107,7 +114,7 @@ $HOME/.openclaw/local-overrides
 但这个目录不直接承载整个 Git 仓库，而是软链接到仓库内的 `runtime/`：
 
 ```bash
-ln -sfn "$HOME/.openclaw/openclaw-local-overrides/runtime" "$HOME/.openclaw/local-overrides"
+ln -sfn "<repo-dir>/runtime" "$HOME/.openclaw/local-overrides"
 ```
 
 ### 3. 在 Shell 启动文件中接入统一入口
@@ -233,7 +240,7 @@ export OPENCLAW_LOCAL_OVERRIDES_LOG_DIR=/tmp/openclaw-local-overrides-logs
 默认运行：
 
 ```bash
-cd "$HOME/.openclaw/openclaw-local-overrides"
+cd "<repo-dir>"
 npm test
 ```
 

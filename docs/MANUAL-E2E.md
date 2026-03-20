@@ -18,13 +18,25 @@
 
 ## 前置条件
 
-1. 已按 README 接入统一入口
+1. 已按 README 完成安装
+
+这里不要求 Git 仓库位于固定目录。
+只要你已经把仓库 clone 到任意 `<repo-dir>`，
+并建立了：
+
+```text
+$HOME/.openclaw/local-overrides -> <repo-dir>/runtime
+```
+
+即可继续下面步骤。
+
+2. 已按 README 接入统一入口
 
 ```bash
 source ~/.bash_profile
 ```
 
-2. 已准备可用的 HTTP 代理
+3. 已准备可用的 HTTP 代理
 
 ```bash
 export HTTP_PROXY=http://<your-http-proxy-host>:<port>
@@ -33,7 +45,7 @@ unset ALL_PROXY
 unset all_proxy
 ```
 
-3. 当前环境可以打开浏览器并完成 OpenAI 登录
+4. 当前环境可以打开浏览器并完成 OpenAI 登录
 
 ## 验证步骤
 

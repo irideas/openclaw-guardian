@@ -229,6 +229,11 @@ openclaw models auth login --provider openai-codex
 - 验证真实代理链路
 - 验证模块接管机制
 
+执行位置：
+
+- 在你自己的仓库根目录 `<repo-dir>` 下执行
+- 不要求仓库位于 `~/.openclaw/` 目录内
+
 ### 手工验证
 
 - 真实执行：
@@ -238,6 +243,12 @@ openclaw models auth login --provider openai-codex
 
 - 验证完整 OAuth 成功
 - 验证真实 token 落盘
+
+前提：
+
+- 仓库可以位于任意 `<repo-dir>`
+- 但运行时软链接应当固定为：
+  `~/.openclaw/local-overrides -> <repo-dir>/runtime`
 
 具体检查清单见：
 

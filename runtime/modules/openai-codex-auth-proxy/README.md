@@ -76,8 +76,11 @@ CLI 阶段的 `code -> token` 交换失败的问题。
 
 只需要：
 
-1. 在 `~/.bash_profile` 中接入统一入口
-2. 保证本模块出现在 `config/enabled-modules.json`
+1. 把 Git 仓库 clone 到你自己的 `<repo-dir>`
+2. 建立运行时软链接：
+   `~/.openclaw/local-overrides -> <repo-dir>/runtime`
+3. 在 `~/.bash_profile` 中接入统一入口
+4. 保证本模块出现在 `config/enabled-modules.json`
 
 统一入口示例：
 
@@ -154,6 +157,7 @@ OPENCLAW_LOCAL_OVERRIDES_FORCE_MODULES=openai-codex-auth-proxy node ...
 在本仓库根目录执行：
 
 ```bash
+cd "<repo-dir>"
 npm test
 ```
 
