@@ -204,7 +204,10 @@ function installCurlFallbackFetch(effectiveProxy, log) {
 
     // 保留一个可调试的关闭开关，便于以后对比：
     // 是 `EnvHttpProxyAgent` 本身生效，还是 `curl fallback` 在兜底。
-    if (process.env.OPENCLAW_PROXY_CURL_FALLBACK_DISABLE === "1") {
+    if (
+      process.env.OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_CURL_FALLBACK_DISABLE ===
+      "1"
+    ) {
       return await originalFetch(input, init);
     }
 
@@ -224,7 +227,9 @@ function resolveOpenClawRoot() {
   // 这样可以避免：
   // - 错用系统上其他版本的 `undici`
   // - `nvm` / 多 Node 版本并存时的依赖错配
-  const override = normalize(process.env.OPENCLAW_PROXY_PRELOAD_OPENCLAW_ROOT);
+  const override = normalize(
+    process.env.OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_OPENCLAW_ROOT
+  );
   if (override) return override;
 
   const arg1 = process.argv[1];
@@ -272,10 +277,10 @@ export async function activate(context) {
     effectiveProxy,
   });
 
-  if (process.env.OPENCLAW_PROXY_PRELOAD_DISABLE === "1") {
-    // 保留旧开关只是为了兼容既有调试习惯；
-    // 它现在只影响当前 issue 的 runtime，不再影响整个框架的 issue 发现。
-    log("preload_skipped", { reason: "legacy_disable" });
+  if (process.env.OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_DISABLE === "1") {
+    // 这个开关只关闭当前 issue 的 runtime 缓解逻辑，
+    // 不影响 guardian 的 issue 发现、preflight 或 repair。
+    log("preload_skipped", { reason: "issue_runtime_disabled" });
     return;
   }
 
@@ -310,8 +315,8 @@ export async function activate(context) {
       dispatcher: agent.constructor?.name || "unknown",
     });
 
-    if (process.env.OPENCLAW_PROXY_PRELOAD_STDERR === "1") {
-      console.error(`[openclaw-preload] EnvHttpProxyAgent enabled for ${effectiveProxy}`);
+    if (process.env.OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_STDERR === "1") {
+      console.error(`[openclaw-guardian] EnvHttpProxyAgent enabled for ${effectiveProxy}`);
     }
   } catch (error) {
     log("preload_failed", {

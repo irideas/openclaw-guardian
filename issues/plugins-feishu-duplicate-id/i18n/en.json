@@ -1,0 +1,14 @@
+{
+  "preflight.summary": "Detected an extra local feishu plugin that conflicts with the bundled feishu plugin.",
+  "preflight.detail.externalDir": "Local extension directory exists at {path}.",
+  "preflight.detail.installRef": "openclaw.json still contains an explicit feishu install reference.",
+  "preflight.detail.allowMissing": "plugins.allow is empty or missing, so non-bundled plugins may still be auto-discovered.",
+  "suggestion.doctor": "Run `openclaw plugins doctor` to review plugin health.",
+  "suggestion.repair": "Run `guardian repair plugins-feishu-duplicate-id --dry-run` to inspect the planned fix.",
+  "repair.noop.summary": "No duplicate local feishu plugin state was detected.",
+  "repair.dryRun.summary": "Dry-run prepared a repair plan for the duplicate local feishu plugin state.",
+  "repair.apply.summary": "Applied the repair plan for the duplicate local feishu plugin state.",
+  "repair.action.backupExtension": "Move local extension from {from} to backup location {to}.",
+  "repair.action.removeInstallRef": "Remove the explicit `plugins.installs.feishu` reference from openclaw.json.",
+  "repair.warning.allowMissing": "plugins.allow is still empty or missing. This repair does not rewrite your allowlist automatically."
+}

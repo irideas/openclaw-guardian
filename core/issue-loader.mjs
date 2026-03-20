@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,6 +15,7 @@ const CURRENT_FILE = fileURLToPath(import.meta.url);
 const CORE_DIR = path.dirname(CURRENT_FILE);
 const DEFAULT_REPO_ROOT = path.resolve(CORE_DIR, "..");
 const DEFAULT_RUNTIME_ROOT = path.join(DEFAULT_REPO_ROOT, "runtime");
+const DEFAULT_OPENCLAW_HOME = path.join(os.homedir(), ".openclaw");
 
 export function normalize(value) {
   const text = String(value || "").trim();
@@ -33,20 +35,14 @@ function resolveEnvValue(env, ...names) {
 }
 
 export function resolveRuntimePaths(env = process.env) {
-  const repoRoot =
-    resolveEnvValue(env, "OPENCLAW_GUARDIAN_REPO_ROOT", "OPENCLAW_LOCAL_OVERRIDES_REPO_ROOT") ||
-    DEFAULT_REPO_ROOT;
-  const runtimeRoot =
-    resolveEnvValue(env, "OPENCLAW_GUARDIAN_RUNTIME_ROOT", "OPENCLAW_LOCAL_OVERRIDES_RUNTIME_ROOT") ||
-    DEFAULT_RUNTIME_ROOT;
-  const openclawHome =
-    resolveEnvValue(env, "OPENCLAW_GUARDIAN_HOME", "OPENCLAW_LOCAL_OVERRIDES_HOME") ||
-    path.resolve(repoRoot, "..");
+  const repoRoot = resolveEnvValue(env, "OPENCLAW_GUARDIAN_REPO_ROOT") || DEFAULT_REPO_ROOT;
+  const runtimeRoot = resolveEnvValue(env, "OPENCLAW_GUARDIAN_RUNTIME_ROOT") || DEFAULT_RUNTIME_ROOT;
+  const openclawHome = resolveEnvValue(env, "OPENCLAW_GUARDIAN_HOME") || DEFAULT_OPENCLAW_HOME;
   const logDir =
-    resolveEnvValue(env, "OPENCLAW_GUARDIAN_LOG_DIR", "OPENCLAW_LOCAL_OVERRIDES_LOG_DIR") ||
+    resolveEnvValue(env, "OPENCLAW_GUARDIAN_LOG_DIR") ||
     path.join(openclawHome, "logs", "local-overrides");
   const issueConfigPath =
-    resolveEnvValue(env, "OPENCLAW_GUARDIAN_ISSUE_CONFIG_PATH", "OPENCLAW_LOCAL_OVERRIDES_CONFIG_PATH") ||
+    resolveEnvValue(env, "OPENCLAW_GUARDIAN_ISSUE_CONFIG_PATH") ||
     path.join(runtimeRoot, "config", "enabled-issues.json");
 
   return {
@@ -108,10 +104,25 @@ export function extractProvider(args) {
 export function matchesIssue(issue, args) {
   const triggers = issue.triggers || issue.match || {};
   const argvAll = Array.isArray(triggers.argvAll) ? triggers.argvAll : [];
+  const commands = Array.isArray(triggers.commands) ? triggers.commands : [];
   const provider = normalize(triggers.provider);
 
-  const hasAllArgs = argvAll.every((value) => args.includes(value));
-  if (!hasAllArgs) return false;
+  if (commands.length > 0) {
+    const commandMatched = commands.some((commandTokens) => {
+      if (!Array.isArray(commandTokens) || commandTokens.length === 0) {
+        return false;
+      }
+
+      return commandTokens.every((token, index) => args[index] === token);
+    });
+
+    if (!commandMatched) return false;
+  }
+
+  if (argvAll.length > 0) {
+    const hasAllArgs = argvAll.every((value) => args.includes(value));
+    if (!hasAllArgs) return false;
+  }
 
   if (provider && extractProvider(args) !== provider) {
     return false;
@@ -121,8 +132,7 @@ export function matchesIssue(issue, args) {
 }
 
 export function parseForcedIssues(env = process.env) {
-  const raw =
-    resolveEnvValue(env, "OPENCLAW_GUARDIAN_FORCE_ISSUES", "OPENCLAW_LOCAL_OVERRIDES_FORCE_MODULES");
+  const raw = resolveEnvValue(env, "OPENCLAW_GUARDIAN_FORCE_ISSUES");
   if (!raw) return new Set();
 
   return new Set(
@@ -192,25 +202,30 @@ export function validateIssue(issueId, issue) {
     return { ok: false, reason: "issue_env_variables_invalid" };
   }
 
+  if (
+    issue.triggers?.commands !== undefined &&
+    (!Array.isArray(issue.triggers.commands) ||
+      issue.triggers.commands.some(
+        (commandTokens) =>
+          !Array.isArray(commandTokens) ||
+          commandTokens.length === 0 ||
+          commandTokens.some((token) => normalize(token) === null),
+      ))
+  ) {
+    return { ok: false, reason: "issue_triggers_commands_invalid" };
+  }
+
   return { ok: true, reason: null };
 }
 
 export function resolveEnabledIssues(configPath) {
   const config = readJson(configPath);
-  return Array.isArray(config.enabledIssues)
-    ? config.enabledIssues
-    : Array.isArray(config.enabledModules)
-      ? config.enabledModules
-      : [];
+  return Array.isArray(config.enabledIssues) ? config.enabledIssues : [];
 }
 
 export function resolveDisabledIssues(configPath) {
   const config = readJson(configPath);
-  return Array.isArray(config.disabledIssues)
-    ? config.disabledIssues
-    : Array.isArray(config.disabledModules)
-      ? config.disabledModules
-      : [];
+  return Array.isArray(config.disabledIssues) ? config.disabledIssues : [];
 }
 
 export function isEnabledByDefault(issue) {
@@ -245,4 +260,16 @@ export function resolveActiveIssueIds(issuesRoot, issueConfigPath) {
 export function resolveIssueLogPath(logDir, issue, issueId) {
   const logFileName = normalize(issue.logging?.file) || `${issueId}.log`;
   return path.join(logDir, logFileName);
+}
+
+export function resolveIssueContext(issueId, env = process.env) {
+  const paths = resolveRuntimePaths(env);
+  const { issuePath, issue } = readIssue(paths.issuesRoot, issueId);
+  return {
+    ...paths,
+    issueId,
+    issuePath,
+    issueDir: path.dirname(issuePath),
+    issue,
+  };
 }

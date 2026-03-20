@@ -1,14 +1,17 @@
 {
   "name": "openclaw-guardian",
-  "version": "0.7.4",
+  "version": "1.0.0",
   "description": "Issue-centric local guardrails, runtime mitigations, and repairs for OpenClaw.",
   "private": true,
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "guardian": "./cli/guardian.mjs"
+  },
   "scripts": {
     "test": "npm run test:unit",
-    "test:all": "node --test test/*.test.mjs",
-    "test:unit": "node --test test/issue-loader.test.mjs",
+    "test:all": "npm run test:unit && npm run test:integration",
+    "test:unit": "node --test test/issue-loader.test.mjs test/preflight-runner.test.mjs test/repair-runner.test.mjs",
     "test:integration": "node --test test/openai-codex-oauth-proxy-failure.integration.test.mjs"
   }
 }

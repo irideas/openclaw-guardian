@@ -58,6 +58,8 @@
 ### 当前对应
 
 - [issue-loader.test.mjs](../test/issue-loader.test.mjs)
+- [preflight-runner.test.mjs](../test/preflight-runner.test.mjs)
+- [repair-runner.test.mjs](../test/repair-runner.test.mjs)
 
 ## 2. Integration-Local
 
@@ -113,7 +115,7 @@
 必须具备可用的远端代理配置，例如：
 
 - GitHub repository secret：
-  `OPENCLAW_PROXY_TEST_PROXY_URL`
+  `OPENCLAW_GUARDIAN_TEST_PROXY_URL`
 
 ### 适合覆盖的内容
 

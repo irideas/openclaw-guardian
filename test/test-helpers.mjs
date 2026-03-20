@@ -13,6 +13,19 @@ export function createTempLogDir() {
   return fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-guardian-test-"));
 }
 
+export function createTempOpenClawHome() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-home-"));
+  fs.mkdirSync(path.join(root, "extensions"), { recursive: true });
+  return root;
+}
+
+export function createTempBundledOpenClawRoot() {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "bundled-openclaw-"));
+  fs.mkdirSync(path.join(root, "extensions", "feishu"), { recursive: true });
+  fs.writeFileSync(path.join(root, "extensions", "feishu", "index.ts"), "export {};\n", "utf8");
+  return root;
+}
+
 export function cleanupDir(dirPath) {
   fs.rmSync(dirPath, { recursive: true, force: true });
 }
@@ -36,7 +49,7 @@ export function writeJson(filePath, value) {
 
 export function resolveProxyForTests() {
   return (
-    process.env.OPENCLAW_PROXY_TEST_PROXY_URL ||
+    process.env.OPENCLAW_GUARDIAN_TEST_PROXY_URL ||
     process.env.HTTPS_PROXY ||
     process.env.HTTP_PROXY ||
     "http://127.0.0.1:7897"

@@ -12,10 +12,10 @@
 # - 当前命令是否命中某个 issue
 # - 哪些 issue 的 runtime 能力需要真正激活
 
-if [[ -n "${__OPENCLAW_LOCAL_OVERRIDES_BOOTSTRAP_LOADED:-}" ]]; then
+if [[ -n "${__OPENCLAW_GUARDIAN_BOOTSTRAP_LOADED:-}" ]]; then
   return 0
 fi
-__OPENCLAW_LOCAL_OVERRIDES_BOOTSTRAP_LOADED=1
+__OPENCLAW_GUARDIAN_BOOTSTRAP_LOADED=1
 
 # 这里要区分“物理路径”和“运行时挂载路径”：
 # 1. 物理路径
@@ -28,45 +28,45 @@ __OPENCLAW_LOCAL_OVERRIDES_BOOTSTRAP_LOADED=1
 # - 但运行时约定仍固定挂载到 `~/.openclaw/local-overrides`
 # - 日志默认路径应该落到 `~/.openclaw/logs/local-overrides`
 #   而不是误落到仓库父目录下
-__openclaw_local_overrides_source_path="${BASH_SOURCE[0]}"
-__openclaw_local_overrides_bootstrap_dir="$(cd -P "$(dirname "${__openclaw_local_overrides_source_path}")" && pwd)"
-__openclaw_local_overrides_runtime_root="$(cd -P "${__openclaw_local_overrides_bootstrap_dir}/.." && pwd)"
-__openclaw_local_overrides_repo_root="$(cd -P "${__openclaw_local_overrides_runtime_root}/.." && pwd)"
-__openclaw_local_overrides_runtime_mount_root="$(cd "$(dirname "${__openclaw_local_overrides_source_path}")/.." && pwd -L)"
-__openclaw_local_overrides_home="${OPENCLAW_GUARDIAN_HOME:-${OPENCLAW_LOCAL_OVERRIDES_HOME:-$(cd "${__openclaw_local_overrides_runtime_mount_root}/.." && pwd -L)}}"
-__openclaw_local_overrides_preload_path="${__openclaw_local_overrides_bootstrap_dir}/node-entry.mjs"
-__openclaw_local_overrides_log_dir="${OPENCLAW_GUARDIAN_LOG_DIR:-${OPENCLAW_LOCAL_OVERRIDES_LOG_DIR:-${__openclaw_local_overrides_home}/logs/local-overrides}}"
-__openclaw_local_overrides_runtime_log_path="${__openclaw_local_overrides_log_dir}/runtime.log"
+__openclaw_guardian_source_path="${BASH_SOURCE[0]}"
+__openclaw_guardian_bootstrap_dir="$(cd -P "$(dirname "${__openclaw_guardian_source_path}")" && pwd)"
+__openclaw_guardian_runtime_root="$(cd -P "${__openclaw_guardian_bootstrap_dir}/.." && pwd)"
+__openclaw_guardian_repo_root="$(cd -P "${__openclaw_guardian_runtime_root}/.." && pwd)"
+__openclaw_guardian_runtime_mount_root="$(cd "$(dirname "${__openclaw_guardian_source_path}")/.." && pwd -L)"
+__openclaw_guardian_home="${OPENCLAW_GUARDIAN_HOME:-$(cd "${__openclaw_guardian_runtime_mount_root}/.." && pwd -L)}"
+__openclaw_guardian_preload_path="${__openclaw_guardian_bootstrap_dir}/node-entry.mjs"
+__openclaw_guardian_log_dir="${OPENCLAW_GUARDIAN_LOG_DIR:-${__openclaw_guardian_home}/logs/local-overrides}"
+__openclaw_guardian_runtime_log_path="${__openclaw_guardian_log_dir}/runtime.log"
 
-_openclaw_local_overrides_log() {
+_openclaw_guardian_log() {
   local event="$1"
   shift || true
 
   # 统一入口自己的日志只写到 `runtime.log`。
   # issue 级日志由 Node runtime 层再分发到各自文件。
-  mkdir -p "$(dirname "${__openclaw_local_overrides_runtime_log_path}")" 2>/dev/null || true
+  mkdir -p "$(dirname "${__openclaw_guardian_runtime_log_path}")" 2>/dev/null || true
 
   printf '{"time":"%s","source":"bootstrap.bash-init","event":"%s","pid":%s,"args":"%s"}\n' \
     "$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
     "${event}" \
     "$$" \
-    "$*" >> "${__openclaw_local_overrides_runtime_log_path}" 2>/dev/null || true
+    "$*" >> "${__openclaw_guardian_runtime_log_path}" 2>/dev/null || true
 }
 
-_openclaw_local_overrides_resolve_real_bin() {
+_openclaw_guardian_resolve_real_bin() {
   # 这里故意用 `type -P`，确保拿到 PATH 中真实的可执行文件，
   # 而不是当前 shell 里已经定义的同名 function。
   type -P openclaw 2>/dev/null || true
 }
 
-__OPENCLAW_LOCAL_OVERRIDES_REAL_BIN="$(_openclaw_local_overrides_resolve_real_bin)"
+__OPENCLAW_GUARDIAN_REAL_BIN="$(_openclaw_guardian_resolve_real_bin)"
 
-_openclaw_local_overrides_build_node_options() {
+_openclaw_guardian_build_node_options() {
   # 统一入口始终通过 `NODE_OPTIONS=--import=...` 注入 Node preload。
   #
   # 这里必须保留已有 `NODE_OPTIONS`，否则可能破坏用户自己的 Node 调试参数。
   # 同时也要避免重复追加相同的 `--import`。
-  local import_flag="--import=${__openclaw_local_overrides_preload_path}"
+  local import_flag="--import=${__openclaw_guardian_preload_path}"
   local current="${NODE_OPTIONS:-}"
 
   if [[ " ${current} " == *" ${import_flag} "* ]]; then
@@ -88,37 +88,48 @@ openclaw() {
   # 1. 解析真实 `openclaw` 二进制
   # 2. 给当前这次命令注入统一 preload
   # 3. 把仓库根、日志目录等运行时上下文透传给 Node 层
-  local real_bin="${__OPENCLAW_LOCAL_OVERRIDES_REAL_BIN}"
+  local real_bin="${__OPENCLAW_GUARDIAN_REAL_BIN}"
 
   if [[ -z "${real_bin}" || ! -x "${real_bin}" ]]; then
-    _openclaw_local_overrides_log "real_bin_missing" "$*"
+    _openclaw_guardian_log "real_bin_missing" "$*"
     printf 'openclaw wrapper error: real binary not found\n' >&2
     return 127
   fi
 
-  if [[ "${OPENCLAW_GUARDIAN_DISABLE:-}" == "1" || "${OPENCLAW_LOCAL_OVERRIDES_DISABLE:-}" == "1" ]]; then
+  if [[ "${OPENCLAW_GUARDIAN_DISABLE:-}" == "1" ]]; then
     # 提供全局逃生开关，便于用户在排查问题时一键绕过整个 override 框架。
     command "${real_bin}" "$@"
     return $?
   fi
 
   local node_options
-  node_options="$(_openclaw_local_overrides_build_node_options)"
+  node_options="$(_openclaw_guardian_build_node_options)"
 
-  _openclaw_local_overrides_log "inject_preload" "$*"
+  _openclaw_guardian_log "inject_preload" "$*"
 
   # 注意这里不做 issue 匹配。
   # 无论 `openclaw` 执行什么子命令，统一入口都注入同一个 preload。
   # 真正的 issue 匹配和 runtime 激活逻辑放在 `bootstrap/node-entry.mjs`，
   # 这样 shell 侧就始终保持最薄的一层。
   NODE_OPTIONS="${node_options}" \
-  OPENCLAW_GUARDIAN_HOME="${__openclaw_local_overrides_home}" \
-  OPENCLAW_GUARDIAN_REPO_ROOT="${__openclaw_local_overrides_repo_root}" \
-  OPENCLAW_GUARDIAN_RUNTIME_ROOT="${__openclaw_local_overrides_runtime_root}" \
-  OPENCLAW_GUARDIAN_LOG_DIR="${__openclaw_local_overrides_log_dir}" \
-  OPENCLAW_LOCAL_OVERRIDES_HOME="${__openclaw_local_overrides_home}" \
-  OPENCLAW_LOCAL_OVERRIDES_REPO_ROOT="${__openclaw_local_overrides_repo_root}" \
-  OPENCLAW_LOCAL_OVERRIDES_RUNTIME_ROOT="${__openclaw_local_overrides_runtime_root}" \
-  OPENCLAW_LOCAL_OVERRIDES_LOG_DIR="${__openclaw_local_overrides_log_dir}" \
+  OPENCLAW_GUARDIAN_HOME="${__openclaw_guardian_home}" \
+  OPENCLAW_GUARDIAN_REPO_ROOT="${__openclaw_guardian_repo_root}" \
+  OPENCLAW_GUARDIAN_RUNTIME_ROOT="${__openclaw_guardian_runtime_root}" \
+  OPENCLAW_GUARDIAN_LOG_DIR="${__openclaw_guardian_log_dir}" \
   command "${real_bin}" "$@"
+}
+
+guardian() {
+  local cli_path="${__openclaw_guardian_repo_root}/cli/guardian.mjs"
+  if [[ ! -f "${cli_path}" ]]; then
+    _openclaw_guardian_log "guardian_cli_missing" "$*"
+    printf 'guardian wrapper error: cli entry not found\n' >&2
+    return 127
+  fi
+
+  OPENCLAW_GUARDIAN_HOME="${__openclaw_guardian_home}" \
+  OPENCLAW_GUARDIAN_REPO_ROOT="${__openclaw_guardian_repo_root}" \
+  OPENCLAW_GUARDIAN_RUNTIME_ROOT="${__openclaw_guardian_runtime_root}" \
+  OPENCLAW_GUARDIAN_LOG_DIR="${__openclaw_guardian_log_dir}" \
+  command node "${cli_path}" "$@"
 }

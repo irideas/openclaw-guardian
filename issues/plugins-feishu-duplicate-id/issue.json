@@ -1,0 +1,37 @@
+{
+  "id": "plugins-feishu-duplicate-id",
+  "title": "Bundled and local feishu plugins share the same plugin id",
+  "category": "plugins",
+  "severity": "warning",
+  "summary": "Detect duplicate local feishu plugin installation and guide users to repair it.",
+  "enabledByDefault": true,
+  "capabilities": {
+    "preflight": true,
+    "runtime": false,
+    "repair": true
+  },
+  "triggers": {
+    "commands": [
+      ["gateway", "restart"],
+      ["gateway", "start"],
+      ["plugins", "list"],
+      ["plugins", "doctor"]
+    ]
+  },
+  "entry": {
+    "preflight": "./preflight.mjs",
+    "repair": "./repair.mjs"
+  },
+  "env": {
+    "variables": [
+      "OPENCLAW_GUARDIAN_OPENCLAW_ROOT"
+    ]
+  },
+  "logging": {
+    "file": "plugins-feishu-duplicate-id.log"
+  },
+  "upstream": {
+    "recommendedCommands": ["openclaw plugins doctor"],
+    "coverage": "partial"
+  }
+}

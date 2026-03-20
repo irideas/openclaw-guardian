@@ -4,7 +4,7 @@
 它不替代上游，不重打包 `OpenClaw`，而是围绕真实环境里的运行时异常、配置冲突与可复现故障，
 提供一套可本地接入、可逐步下线、可独立维护的问题发现与修复机制。
 
-当前版本：`0.7.3`
+当前版本：`1.0.0`
 
 ## 这是什么
 
@@ -32,11 +32,12 @@
 
 ## 当前解决的问题
 
-当前仓库已经内置一个 issue：
+当前仓库已经内置两个 issue：
 
 - [openai-codex-oauth-proxy-failure](./issues/openai-codex-oauth-proxy-failure/README.md)
+- [plugins-feishu-duplicate-id](./issues/plugins-feishu-duplicate-id/README.md)
 
-它解决的现象是：
+当前两个代表问题分别是：
 
 ```bash
 openclaw models auth login --provider openai-codex
@@ -56,6 +57,21 @@ openclaw models auth login --provider openai-codex
 
 这个 issue 当前主要通过 `runtime` 能力面落地，
 即在命中的运行时链路上做非常窄的代理接管与 `curl fallback`。
+
+以及：
+
+```bash
+openclaw gateway restart
+openclaw plugins list
+```
+
+在本地额外存在 `feishu` 扩展时，可能出现：
+
+- `plugin feishu: duplicate plugin id detected`
+- `plugins.allow is empty; discovered non-bundled plugins may auto-load`
+
+这个 issue 当前通过 `preflight + repair` 能力面落地，
+即先做命令前检测，再提供显式修复动作。
 
 ## 为什么需要它
 
@@ -100,6 +116,8 @@ openclaw models auth login --provider openai-codex
 
 ```text
 openclaw-guardian/
+  cli/
+    guardian.mjs
   .github/
     workflows/
       test.yml
@@ -126,17 +144,25 @@ openclaw-guardian/
       i18n/
         en.json
         zh-CN.json
+    plugins-feishu-duplicate-id/
+      issue.json
+      preflight.mjs
+      repair.mjs
+      README.md
+      i18n/
+        en.json
+        zh-CN.json
   runtime/
     bootstrap/
       bash-init.bash
       logger.mjs
-      module-runtime.mjs
       node-entry.mjs
-      node-preload-entry.mjs
     config/
       enabled-issues.json
   test/
     issue-loader.test.mjs
+    preflight-runner.test.mjs
+    repair-runner.test.mjs
     openai-codex-oauth-proxy-failure.integration.test.mjs
     test-helpers.mjs
   package.json
@@ -163,6 +189,19 @@ openclaw-guardian/
 - 公共层只负责语言解析与文案渲染
 
 这样后续新增 issue 时，就可以在不改公共框架的前提下补齐对应语言。
+
+接入 `bash-init.bash` 后，当前 shell 还会提供一个显式命令：
+
+```bash
+guardian
+```
+
+它可用于：
+
+- `guardian issue list`
+- `guardian issue show <issue-id>`
+- `guardian repair <issue-id> --dry-run`
+- `guardian repair <issue-id> --apply`
 
 ## 安装
 
@@ -246,6 +285,12 @@ openclaw is a function
 
 ```bash
 tail -n 20 "$HOME/.openclaw/logs/local-overrides/runtime.log"
+```
+
+也可以验证 `guardian` 是否已接入：
+
+```bash
+type -a guardian
 ```
 
 ## 测试

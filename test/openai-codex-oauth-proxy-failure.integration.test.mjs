@@ -61,7 +61,7 @@ test("统一 runtime 路由应能跑通 openai-codex OAuth 代理问题的假 to
     const runtimeLog = fs.readFileSync(path.join(logDir, "runtime.log"), "utf8");
     const issueLog = fs.readFileSync(path.join(logDir, ISSUE_LOG), "utf8");
 
-    assert.match(runtimeLog, /"activeIssueIds":\["openai-codex-oauth-proxy-failure"\]/);
+    assert.match(runtimeLog, /"activeIssueIds":\[[^\]]*"openai-codex-oauth-proxy-failure"/);
     assert.match(runtimeLog, /"forceMatch":true/);
     assert.match(issueLog, /"event":"curl_fallback_succeeded".*"status":401/);
   } finally {

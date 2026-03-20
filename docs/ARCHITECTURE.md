@@ -74,6 +74,8 @@ openclaw-guardian/
     ARCHITECTURE.md
     MANUAL-E2E.md
     TESTING.md
+  cli/
+    guardian.mjs
   core/
     i18n-renderer.mjs
     issue-loader.mjs
@@ -90,13 +92,19 @@ openclaw-guardian/
       i18n/
         en.json
         zh-CN.json
+    plugins-feishu-duplicate-id/
+      issue.json
+      preflight.mjs
+      repair.mjs
+      README.md
+      i18n/
+        en.json
+        zh-CN.json
   runtime/
     bootstrap/
       bash-init.bash
       logger.mjs
-      module-runtime.mjs
       node-entry.mjs
-      node-preload-entry.mjs
     config/
       enabled-issues.json
   test/
@@ -176,8 +184,6 @@ openclaw-guardian/
 它负责把控制权交给：
 
 - `core/runtime-runner.mjs`
-
-`runtime/bootstrap/node-preload-entry.mjs` 当前仅作为兼容层保留。
 
 ### 6.3 运行时挂载路径
 
@@ -310,6 +316,29 @@ $HOME/.openclaw/local-overrides
 - 为进程安装 `EnvHttpProxyAgent`
 - 仅对 `https://auth.openai.com/oauth/token` 增加窄范围 `curl fallback`
 
+### `plugins-feishu-duplicate-id`
+
+类型：
+
+- `plugins`
+
+当前能力面：
+
+- `preflight`
+- `repair`
+
+目标问题：
+
+- 本地额外存在 `feishu` 扩展或显式安装引用
+- 与内置 `feishu` 插件使用相同 plugin id
+- 在 `gateway restart`、`plugins list` 等命令前后触发重复插件告警
+
+当前做法：
+
+- 在相关命令执行前做 `preflight`
+- 给出 `openclaw plugins doctor` 与 `guardian repair ...` 的建议
+- 在显式 `repair --apply` 时备份本地扩展并清理显式安装引用
+
 ## 12. 后续扩展方向
 
 当前框架已经具备继续扩展的基础，下一批适合进入的问题类型包括：
@@ -321,8 +350,8 @@ $HOME/.openclaw/local-overrides
 
 优先顺序建议是：
 
-1. 引入第一个 `preflight + repair` issue
-2. 增加显式 CLI 入口
+1. 扩展更多 `preflight + repair` issue
+2. 完善显式 `guardian` CLI
 3. 扩展更多语言，但保持 `zh-CN + en` 为最低稳定基线
 
 ## 13. 非目标

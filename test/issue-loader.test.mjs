@@ -62,6 +62,21 @@ test("matchesIssue 应当正确匹配 openai-codex 登录命令", () => {
   );
 });
 
+test("matchesIssue 应当支持按命令前缀匹配 preflight issue", () => {
+  const issue = {
+    triggers: {
+      commands: [
+        ["gateway", "restart"],
+        ["plugins", "list"],
+      ],
+    },
+  };
+
+  assert.equal(matchesIssue(issue, ["gateway", "restart"]), true);
+  assert.equal(matchesIssue(issue, ["plugins", "list"]), true);
+  assert.equal(matchesIssue(issue, ["plugins", "doctor"]), false);
+});
+
 test("parseForcedIssues 应当正确解析逗号分隔列表", () => {
   const forced = parseForcedIssues({
     OPENCLAW_GUARDIAN_FORCE_ISSUES: "a, b ,c",
@@ -133,6 +148,24 @@ test("validateIssue 应当校验默认启用、能力面与 env 字段", () => {
       env: { variables: ["HTTP_PROXY", ""] },
     }),
     { ok: false, reason: "issue_env_variables_invalid" },
+  );
+
+  assert.deepEqual(
+    validateIssue("plugins-feishu-duplicate-id", {
+      id: "plugins-feishu-duplicate-id",
+      title: "Bundled and local feishu plugins share the same plugin id",
+      category: "plugins",
+      severity: "warning",
+      capabilities: { runtime: false, preflight: true, repair: true },
+      entry: {
+        preflight: "./preflight.mjs",
+        repair: "./repair.mjs",
+      },
+      triggers: {
+        commands: [["gateway", "restart"], []],
+      },
+    }),
+    { ok: false, reason: "issue_triggers_commands_invalid" },
   );
 });
 

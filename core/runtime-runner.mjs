@@ -38,7 +38,7 @@ const runtimeLog = createJsonlLogger(RUNTIME_LOG_PATH, "guardian.runtime", {
 });
 
 function isGuardianDisabled(env = process.env) {
-  return env.OPENCLAW_GUARDIAN_DISABLE === "1" || env.OPENCLAW_LOCAL_OVERRIDES_DISABLE === "1";
+  return env.OPENCLAW_GUARDIAN_DISABLE === "1";
 }
 
 async function activateRuntimeIssue(issueId, issue, issueDir) {

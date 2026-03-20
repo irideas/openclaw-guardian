@@ -52,18 +52,18 @@ jobs:
 
       - name: Validate proxy secret
         env:
-          OPENCLAW_PROXY_TEST_PROXY_URL: ${{ secrets.OPENCLAW_PROXY_TEST_PROXY_URL }}
+          OPENCLAW_GUARDIAN_TEST_PROXY_URL: ${{ secrets.OPENCLAW_GUARDIAN_TEST_PROXY_URL }}
         run: |
-          if [ -z "$OPENCLAW_PROXY_TEST_PROXY_URL" ]; then
-            echo "Missing repository secret: OPENCLAW_PROXY_TEST_PROXY_URL" >&2
+          if [ -z "$OPENCLAW_GUARDIAN_TEST_PROXY_URL" ]; then
+            echo "Missing repository secret: OPENCLAW_GUARDIAN_TEST_PROXY_URL" >&2
             exit 1
           fi
 
       - name: Run integration tests
         env:
-          HTTP_PROXY: ${{ secrets.OPENCLAW_PROXY_TEST_PROXY_URL }}
-          HTTPS_PROXY: ${{ secrets.OPENCLAW_PROXY_TEST_PROXY_URL }}
-          OPENCLAW_PROXY_TEST_PROXY_URL: ${{ secrets.OPENCLAW_PROXY_TEST_PROXY_URL }}
+          HTTP_PROXY: ${{ secrets.OPENCLAW_GUARDIAN_TEST_PROXY_URL }}
+          HTTPS_PROXY: ${{ secrets.OPENCLAW_GUARDIAN_TEST_PROXY_URL }}
+          OPENCLAW_GUARDIAN_TEST_PROXY_URL: ${{ secrets.OPENCLAW_GUARDIAN_TEST_PROXY_URL }}
         run: |
           unset ALL_PROXY
           unset all_proxy

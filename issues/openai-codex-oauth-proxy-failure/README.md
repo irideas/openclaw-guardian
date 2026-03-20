@@ -119,13 +119,13 @@ OPENCLAW_GUARDIAN_DISABLE=1 openclaw models auth login --provider openai-codex
 关闭本 issue 的 runtime 修复：
 
 ```bash
-OPENCLAW_PROXY_PRELOAD_DISABLE=1 openclaw models auth login --provider openai-codex
+OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_DISABLE=1 openclaw models auth login --provider openai-codex
 ```
 
 仅关闭 `curl fallback`：
 
 ```bash
-OPENCLAW_PROXY_CURL_FALLBACK_DISABLE=1 openclaw models auth login --provider openai-codex
+OPENCLAW_GUARDIAN_ISSUE_OPENAI_CODEX_OAUTH_PROXY_FAILURE_CURL_FALLBACK_DISABLE=1 openclaw models auth login --provider openai-codex
 ```
 
 强制在非匹配命令上激活本 issue，便于调试：
