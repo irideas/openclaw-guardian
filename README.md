@@ -107,7 +107,7 @@ openclaw-guardian/
   CHANGELOG.md
   LICENSE
   docs/
-    GUARDIAN-REDESIGN.md
+    ARCHITECTURE.md
     MANUAL-E2E.md
     TESTING.md
   core/
@@ -281,6 +281,6 @@ npm run test:integration
 
 - [CHANGELOG.md](./CHANGELOG.md)
 - [AGENTS.md](./AGENTS.md)
-- [GUARDIAN-REDESIGN.md](./docs/GUARDIAN-REDESIGN.md)
+- [ARCHITECTURE.md](./docs/ARCHITECTURE.md)
 
 仓库采用 [MIT License](./LICENSE)。

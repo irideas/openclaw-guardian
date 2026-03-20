@@ -19,6 +19,14 @@
 - 单测与集成测试全部切换到 issue-centric 命名
 - README、测试文档与人工 E2E 文档统一到 guardian / issue 叙事
 
+## 0.7.4 - 2026-03-20
+
+### Changed
+
+- 将 `docs/GUARDIAN-REDESIGN.md` 收敛为当前状态的 `docs/ARCHITECTURE.md`
+- 移除已经完成的迁移计划描述，只保留当前架构、边界与扩展方向
+- README 中的架构文档引用同步切换到 `ARCHITECTURE.md`
+
 ## 0.7.1 - 2026-03-20
 
 ### Changed

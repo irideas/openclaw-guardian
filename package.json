@@ -1,6 +1,6 @@
 {
   "name": "openclaw-guardian",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "Issue-centric local guardrails, runtime mitigations, and repairs for OpenClaw.",
   "private": true,
   "license": "MIT",
