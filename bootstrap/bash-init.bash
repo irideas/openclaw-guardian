@@ -21,7 +21,8 @@ __openclaw_local_overrides_bootstrap_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" 
 __openclaw_local_overrides_repo_root="$(cd "${__openclaw_local_overrides_bootstrap_dir}/.." && pwd)"
 __openclaw_local_overrides_home="$(cd "${__openclaw_local_overrides_repo_root}/.." && pwd)"
 __openclaw_local_overrides_preload_path="${__openclaw_local_overrides_bootstrap_dir}/node-preload-entry.mjs"
-__openclaw_local_overrides_runtime_log_path="${__openclaw_local_overrides_home}/logs/local-overrides/runtime.log"
+__openclaw_local_overrides_log_dir="${OPENCLAW_LOCAL_OVERRIDES_LOG_DIR:-${__openclaw_local_overrides_home}/logs/local-overrides}"
+__openclaw_local_overrides_runtime_log_path="${__openclaw_local_overrides_log_dir}/runtime.log"
 
 _openclaw_local_overrides_log() {
   local event="$1"
@@ -80,6 +81,6 @@ openclaw() {
   NODE_OPTIONS="${node_options}" \
   OPENCLAW_LOCAL_OVERRIDES_HOME="${__openclaw_local_overrides_home}" \
   OPENCLAW_LOCAL_OVERRIDES_REPO_ROOT="${__openclaw_local_overrides_repo_root}" \
+  OPENCLAW_LOCAL_OVERRIDES_LOG_DIR="${__openclaw_local_overrides_log_dir}" \
   command "${real_bin}" "$@"
 }
-

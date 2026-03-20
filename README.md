@@ -39,6 +39,25 @@ local-overrides/
   用于修正 `openclaw models auth login --provider openai-codex`
   在某些代理环境下的 `oauth/token` 交换异常。
 
+## 模块约定
+
+每个模块目前遵循这一组公共约定：
+
+- `modules/<module-id>/module.json`
+  声明模块 id、匹配规则、入口文件和日志文件
+- `modules/<module-id>/preload-hook.mjs`
+  实现模块自己的 Node preload 行为
+- `config/enabled-modules.json`
+  负责决定哪些模块被统一运行时启用
+
+当前 `module.json` 已支持的字段有：
+
+- `id`
+- `match.argvAll`
+- `match.provider`
+- `entry.preload`
+- `logging.file`
+
 ## 安装步骤
 
 ### 1. 克隆仓库
@@ -134,4 +153,34 @@ $HOME/.openclaw/logs/local-overrides/<module-log-file>
 
 ```text
 $HOME/.openclaw/logs/local-overrides/openai-codex-auth-proxy.log
+```
+
+如果需要在测试或调试中隔离日志目录，可以临时覆盖：
+
+```bash
+export OPENCLAW_LOCAL_OVERRIDES_LOG_DIR=/tmp/openclaw-local-overrides-logs
+```
+
+## 测试
+
+当前仓库已经包含：
+
+- 公共运行时单测
+- `openai-codex-auth-proxy` 的集成测试
+
+运行方式：
+
+```bash
+cd "$HOME/.openclaw/local-overrides"
+export HTTP_PROXY=http://<your-http-proxy-host>:<port>
+export HTTPS_PROXY=http://<your-http-proxy-host>:<port>
+unset ALL_PROXY
+unset all_proxy
+npm test
+```
+
+如果要显式指定集成测试使用的代理，可以设置：
+
+```bash
+export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
 ```

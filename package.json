@@ -1,0 +1,8 @@
+{
+  "name": "openclaw-local-overrides",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}

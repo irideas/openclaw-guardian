@@ -40,6 +40,13 @@ CLI 阶段的 `code -> token` 交换失败的问题。
 声明位置见：
 [module.json](./module.json)
 
+其中当前用到的关键字段是：
+
+- `match.argvAll`
+- `match.provider`
+- `entry.preload`
+- `logging.file`
+
 ## 修复逻辑
 
 本模块当前做两层修复：
@@ -113,6 +120,32 @@ OPENCLAW_PROXY_CURL_FALLBACK_DISABLE=1 openclaw models auth login --provider ope
 
 ```bash
 OPENCLAW_LOCAL_OVERRIDES_FORCE_MODULES=openai-codex-auth-proxy node ...
+```
+
+## 测试
+
+本模块当前已有两类测试：
+
+1. 单测
+   由公共运行时测试覆盖模块匹配、配置解析和 schema 约定
+2. 集成测试
+   真实拉起统一 preload 路由，并对假 `oauth/token` 请求断言 `401 token_expired`
+
+在本仓库根目录执行：
+
+```bash
+export HTTP_PROXY=http://<your-http-proxy-host>:<port>
+export HTTPS_PROXY=http://<your-http-proxy-host>:<port>
+unset ALL_PROXY
+unset all_proxy
+npm test
+```
+
+如果你希望测试显式使用某个代理，而不是继承当前 shell 的 `HTTP_PROXY` / `HTTPS_PROXY`，
+可以额外设置：
+
+```bash
+export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
 ```
 
 ## 兼容入口
