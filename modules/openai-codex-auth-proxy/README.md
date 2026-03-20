@@ -141,15 +141,25 @@ OPENCLAW_LOCAL_OVERRIDES_FORCE_MODULES=openai-codex-auth-proxy node ...
    由公共运行时测试覆盖模块匹配、配置解析和 schema 约定
 2. 集成测试
    真实拉起统一 preload 路由，并对假 `oauth/token` 请求断言 `401 token_expired`
+3. 人工 E2E
+   验证真实浏览器授权、真实 token 交换和真实落盘
 
 在本仓库根目录执行：
+
+```bash
+npm test
+```
+
+这会只执行 `unit`。
+
+如果要执行集成测试：
 
 ```bash
 export HTTP_PROXY=http://<your-http-proxy-host>:<port>
 export HTTPS_PROXY=http://<your-http-proxy-host>:<port>
 unset ALL_PROXY
 unset all_proxy
-npm test
+npm run test:integration
 ```
 
 如果你希望测试显式使用某个代理，而不是继承当前 shell 的 `HTTP_PROXY` / `HTTPS_PROXY`，
@@ -158,6 +168,10 @@ npm test
 ```bash
 export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
 ```
+
+人工 E2E 清单见：
+
+- [MANUAL-E2E.md](../../MANUAL-E2E.md)
 
 这里保留 `OPENCLAW_PROXY_PRELOAD_DISABLE`，
 主要是为了兼容既有调试习惯。

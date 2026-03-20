@@ -8,12 +8,14 @@
 - 一组可启停的 `modules`
 - 一份集中配置 `config/enabled-modules.json`
 
-当前仓库版本：`0.5.0`
+当前仓库版本：`0.6.0`
 
 版本演进请参考：
 
 - [CHANGELOG.md](./CHANGELOG.md)
 - [AGENTS.md](./AGENTS.md)
+- [TESTING.md](./TESTING.md)
+- [MANUAL-E2E.md](./MANUAL-E2E.md)
 
 ## 目录结构
 
@@ -207,14 +209,10 @@ export OPENCLAW_LOCAL_OVERRIDES_LOG_DIR=/tmp/openclaw-local-overrides-logs
 - `openai-codex-auth-proxy` 的集成测试
 - 最小 GitHub Actions 测试工作流
 
-运行方式：
+默认运行：
 
 ```bash
 cd "$HOME/.openclaw/local-overrides"
-export HTTP_PROXY=http://<your-http-proxy-host>:<port>
-export HTTPS_PROXY=http://<your-http-proxy-host>:<port>
-unset ALL_PROXY
-unset all_proxy
 npm test
 ```
 
@@ -223,9 +221,20 @@ npm test
 ```bash
 npm run test:unit
 npm run test:integration
+npm run test:all
 ```
 
-如果要显式指定集成测试使用的代理，可以设置：
+说明：
+
+- `npm test`
+  只执行 `unit`
+- `npm run test:integration`
+  需要真实代理
+- `npm run test:all`
+  本地一次性执行全部自动化测试
+
+如果要执行 `integration` 或 `test:all`，需要准备代理环境。
+如需显式指定集成测试使用的代理，可以设置：
 
 ```bash
 export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
@@ -237,6 +246,7 @@ export OPENCLAW_PROXY_TEST_PROXY_URL=http://<your-http-proxy-host>:<port>
 - 模块发现与默认启用策略
 - 统一 preload 路由
 - 统一 bash 入口到 `openai-codex-auth-proxy` 的集成路径
+- 人工 E2E 清单见 [MANUAL-E2E.md](./MANUAL-E2E.md)
 
 ## GitHub Actions
 
