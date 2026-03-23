@@ -11,6 +11,7 @@
 - 新增 `internal/agent-team/PROJECT-GOVERNANCE.md`，固化 guardian 的纳入边界、决策分层、GitHub 工作台承载方式与身份策略
 - 新增 `internal/agent-team/MAINTENANCE-RHYTHM.md`，定义召唤制到周期巡检制的维护节奏、模型分工与后续 GitHub 运作方向
 - 新增 `internal/agent-team/DISCUSSIONS-WORKBENCH.md`，明确四个核心 Discussions 的分工边界、使用顺序与记录风格
+- 新增 `internal/agent-team/DISCUSSIONS-TEMPLATES.md`，提供四个核心 Discussions 的推荐帖头模板与最小写法
 
 ### Changed
 

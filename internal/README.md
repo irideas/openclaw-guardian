@@ -9,7 +9,7 @@
 
 ## 当前分层约定
 
-- `internal/agent-team/`：与项目组内 Agent 角色、治理方式、维护节奏、协作边界、Discussions 工作台分工有关的内部文档
+- `internal/agent-team/`：与项目组内 Agent 角色、治理方式、维护节奏、协作边界、Discussions 工作台分工与模板有关的内部文档
 - 后续如有需要，可继续增加更细的内部子目录，但应保持职责清晰，不与 `docs/` 混放
 
 ## 规则
