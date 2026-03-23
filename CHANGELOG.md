@@ -2,6 +2,19 @@
 
 本文档记录 `openclaw-guardian` 从 `1.0.0` 开始的正式版本演进。
 
+## Unreleased
+
+### Added
+
+- 新增 `internal/README.md`，定义公开文档与内部文档的目录边界
+- 新增 `internal/agent-team/GUARDIAN-CHIEF.md`，定义 `guardian-chief` 作为项目长期维护负责人的角色、职责、边界与载体策略
+- 新增 `internal/agent-team/PROJECT-GOVERNANCE.md`，固化 guardian 的纳入边界、决策分层、GitHub 工作台承载方式与身份策略
+- 新增 `internal/agent-team/MAINTENANCE-RHYTHM.md`，定义召唤制到周期巡检制的维护节奏、模型分工与后续 GitHub 运作方向
+
+### Changed
+
+- 在 `AGENTS.md` 中新增公开文档与内部文档的强制边界规则，明确 `docs/` 只用于对外公开内容，`internal/agent-team/` 用于项目组内 Agent 与治理文档
+
 ## 1.4.0 - 2026-03-23
 
 ### Added
