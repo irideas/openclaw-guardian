@@ -18,6 +18,17 @@
 - 在 `AGENTS.md` 中新增公开文档与内部文档的强制边界规则，明确 `docs/` 只用于对外公开内容，`internal/agent-team/` 用于项目组内 Agent 与治理文档
 - 新增项目操作约定：提交信息默认使用简体中文；与项目维护相关的阶段性记录优先使用 GitHub Discussions 承载，记录语言默认使用简体中文
 
+## 1.5.0 - 2026-03-24
+
+### Added
+
+- 新增 `test/openai-codex-oauth-proxy-failure.unit.test.mjs`，覆盖 `curl fallback` 传输层失败时自动退回原始 `fetch` 的行为
+
+### Changed
+
+- 修正 `openai-codex-oauth-proxy-failure` 的 `mitigation` 策略：`curl fallback` 仅作为兜底手段，若 `curl` 自身出现 `SSL_ERROR_SYSCALL` 等传输层失败，将自动退回 `fetch + EnvHttpProxyAgent`，不再把整次 OAuth 登录直接打死
+- 在 issue README 中补充 `curl fallback` 的降级行为与新日志事件说明
+
 ## 1.4.0 - 2026-03-23
 
 ### Added

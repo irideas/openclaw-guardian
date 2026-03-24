@@ -48,12 +48,13 @@ export function writeJson(filePath, value) {
 }
 
 export function resolveProxyForTests() {
-  return (
-    process.env.OPENCLAW_GUARDIAN_TEST_PROXY_URL ||
-    process.env.HTTPS_PROXY ||
-    process.env.HTTP_PROXY ||
-    "http://127.0.0.1:7897"
-  );
+  // 测试代理必须由仓库自己显式控制，不能被开发机当前 shell
+  // 里的 `HTTP_PROXY/HTTPS_PROXY` 偶然值污染。
+  //
+  // 优先级只保留两层：
+  // 1. 显式传入 `OPENCLAW_GUARDIAN_TEST_PROXY_URL`
+  // 2. 仓库约定的本地 HTTP 代理默认值
+  return process.env.OPENCLAW_GUARDIAN_TEST_PROXY_URL || "http://127.0.0.1:7897";
 }
 
 export function runProcess(command, args, options = {}) {

@@ -159,7 +159,13 @@ async function curlFetchThroughProxy(request, effectiveProxy, log) {
         signal,
         stderr,
       });
-      throw new TypeError(`curl fallback failed: ${stderr || `exit ${code}`}`.trim());
+      const error = new TypeError(
+        `curl fallback failed: ${stderr || `exit ${code}`}`.trim()
+      );
+      error.curlExitCode = code;
+      error.curlSignal = signal;
+      error.curlStderr = stderr;
+      throw error;
     }
 
     const headerText = fs.readFileSync(headerPath, "utf8");
@@ -199,16 +205,46 @@ function installCurlFallbackFetch(effectiveProxy, log) {
     const request = new Request(input, init);
     // 除目标端点外，其他请求完全走原始链路。
     if (!isOpenAITokenEndpoint(request.url)) {
-      return await originalFetch(input, init);
+      return await originalFetch(request);
     }
 
     // 保留一个可调试的关闭开关，便于以后对比：
     // 是 `EnvHttpProxyAgent` 本身生效，还是 `curl fallback` 在兜底。
     if (process.env.OPENCLAW_GUARDIAN_CODEX_AUTH_CURL_FALLBACK_DISABLE === "1") {
-      return await originalFetch(input, init);
+      return await originalFetch(request);
     }
 
-    return await curlFetchThroughProxy(request, effectiveProxy, log);
+    // `curl fallback` 只是兜底手段，不应该成为新的单点失败源。
+    // 如果 `curl` 自己因为瞬时 TLS/代理抖动失败，应退回原始
+    // `fetch + EnvHttpProxyAgent` 路径，而不是直接打断整个 OAuth 流程。
+    const curlRequest = request.clone();
+    const fetchRequest = request.clone();
+
+    try {
+      return await curlFetchThroughProxy(curlRequest, effectiveProxy, log);
+    } catch (error) {
+      log("curl_fallback_degraded_to_fetch", {
+        url: request.url,
+        method: request.method || "GET",
+        effectiveProxy,
+        message: error?.message || String(error),
+        code: error?.curlExitCode ?? null,
+        signal: error?.curlSignal ?? null,
+      });
+
+      try {
+        return await originalFetch(fetchRequest);
+      } catch (fetchError) {
+        log("curl_fallback_then_fetch_failed", {
+          url: request.url,
+          method: request.method || "GET",
+          effectiveProxy,
+          curlMessage: error?.message || String(error),
+          fetchMessage: fetchError?.message || String(fetchError),
+        });
+        throw fetchError;
+      }
+    }
   };
 
   log("curl_fallback_installed", {
@@ -216,6 +252,13 @@ function installCurlFallbackFetch(effectiveProxy, log) {
     target: "https://auth.openai.com/oauth/token",
   });
 }
+
+// 为当前仓库自己的单测暴露最小必要内部能力。
+// 这些导出不属于 guardian 的公共稳定 API。
+export const __test__ = {
+  installCurlFallbackFetch,
+  parseCurlHeaderFile,
+};
 
 function resolveOpenClawRoot() {
   // 当前 issue 必须定位“正在执行的 openclaw 安装目录”，

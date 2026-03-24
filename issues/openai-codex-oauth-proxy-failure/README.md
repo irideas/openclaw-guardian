@@ -70,6 +70,13 @@ openclaw models auth login --provider openai-codex
 2. 只对 `https://auth.openai.com/oauth/token`
    增加极小范围的 `curl fallback`
 
+需要特别说明的是：
+
+- `curl fallback` 只是兜底，不是强制接管
+- 如果 `curl` 自己因为瞬时 TLS / 代理链路波动失败，guardian 会自动退回原始
+  `fetch + EnvHttpProxyAgent`
+- 不再因为一次 `curl` 传输层失败就直接把整次 OAuth 登录打死
+
 这个方案的目标不是改写整个 `OpenClaw` 网络栈，而是只修复这条已经明确定位的问题链路：
 
 - 浏览器授权后
@@ -142,6 +149,8 @@ $HOME/.openclaw/logs/guardian/guardian.log
 - `curl_fallback_spawn`
 - `curl_fallback_succeeded`
 - `curl_fallback_failed`
+- `curl_fallback_degraded_to_fetch`
+- `curl_fallback_then_fetch_failed`
 
 如果要验证这个 issue 是否真正解决了问题，应重点看：
 
