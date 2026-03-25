@@ -128,12 +128,16 @@ openclaw-guardian/
   LICENSE
   docs/
     ARCHITECTURE.md
+    decisions/
+      README.md
     ISSUE-AUTHORING.md
     ISSUE-SCHEMA.md
     MANUAL-E2E.md
     MAINTENANCE.md
     RUNTIME-CONTRACT.md
     TESTING.md
+    workflows/
+      discussion-to-decision.md
   scripts/
     new-issue.mjs
   templates/
@@ -222,6 +226,10 @@ openclaw-guardian/
   了解 `bridge`、runner 与 issue context 的契约
 - [MAINTENANCE.md](./docs/MAINTENANCE.md)
   了解升级、回归、发布与 CI 排障 checklist
+- [discussion-to-decision.md](./docs/workflows/discussion-to-decision.md)
+  了解 proposal、`Discussions`、共识与 `docs/decisions/` 的流转规则
+- [docs/decisions/README.md](./docs/decisions/README.md)
+  了解哪些内容适合沉淀为正式决策
 - [TESTING.md](./docs/TESTING.md)
   了解测试分层与环境独立性约束
 - [MANUAL-E2E.md](./docs/MANUAL-E2E.md)

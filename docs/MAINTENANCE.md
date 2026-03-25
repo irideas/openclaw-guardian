@@ -9,6 +9,28 @@
 - CI 红了先查什么
 - 发布前要检查什么
 
+## 0. 讨论到决策的工作流
+
+新增问题想法、能力层命名、平台增强方向与治理规则时，应先走：
+
+1. 在维护工作区起草草稿
+2. 发到 `GitHub Discussions`
+3. 讨论达成共识
+4. 将共识沉淀到 `docs/decisions/`
+5. 如需实际落地，再创建 `Issue` 进入实现
+
+详细规则见：
+
+- [discussion-to-decision.md](./workflows/discussion-to-decision.md)
+- [decisions/README.md](./decisions/README.md)
+
+额外约定：
+
+- `Discussions` 正文默认使用简体中文
+- 术语、路径、代码标识符、能力名与字段名保持英文
+- 未定稿 proposal 默认不进入 repo 已跟踪内容
+- 新增 proposal 时，不要再向 repo 的 `internal/` 目录新增已跟踪文件
+
 ## 1. 日常修改 checklist
 
 ### 修改公共层时
@@ -128,3 +150,16 @@
 6. 最后更新 `CHANGELOG.md`
 
 这样能降低“代码先行、语义后补”带来的架构漂移。
+
+## 8. proposal 与决策的落点
+
+维护过程中应区分三类材料：
+
+1. 工作区草稿
+   用于起草 `Discussions` 文本、收集证据、整理备选方案；不进入 repo 已跟踪内容
+2. `GitHub Discussions`
+   用于公开讨论候选问题、增强方向、能力命名与边界设计
+3. `docs/decisions/`
+   用于沉淀已经达成共识、可以作为后续实现依据的决策
+
+不要把未定稿 proposal 直接当作文档长期保留在 repo 中。

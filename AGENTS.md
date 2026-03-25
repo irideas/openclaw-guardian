@@ -1,15 +1,16 @@
 # AGENTS.md
 
-本文件描述 `openclaw-guardian` 的维护规则，以及公开文档与内部文档的边界。
+本文件描述 `openclaw-guardian` 的维护规则。
 项目结构、issue 说明和使用方式以 [README.md](./README.md) 为准，不在这里重复。
 
-## 文档边界（强制）
+## 讨论与决策工作流（强制）
 
-- `docs/` 只承载对外公开文档：公开架构、公开使用说明、公开维护说明、公开 schema 与公开测试说明。
-- `internal/` 只承载项目组内部资料：Agent 角色设计、项目治理规则、工作台约定、内部维护节奏、候选方案与未准备公开的材料。
-- 与 `guardian-chief`、项目内部治理、Agent 协作方式有关的文档，不应放在 `docs/` 根下，应统一落在 `internal/` 的合适子目录。
-- 当前约定：与养 claw / 建立 Agent / 项目组协作有关的文档统一放在 `internal/agent-team/`。
-- 如果某份内部文档未来要对外公开，应重新整理后迁移到 `docs/`，而不是直接暴露内部工作材料。
+- 未定稿的想法、候选问题、能力命名讨论、方案比较和边界澄清，应先走 `GitHub Discussions`，不应直接进入 repo 已跟踪内容。
+- `GitHub Discussions` 的正文默认使用简体中文；术语、路径、代码标识符、能力名和字段名保持英文并用反引号包裹。
+- 只有在讨论达成共识后，才应把结果沉淀到 `docs/decisions/`。
+- 只有在某项共识已经清晰到可以直接实施时，才应创建 `Issue` 进入实现跟踪。
+- 新增 proposal、治理草稿或候选方案时，默认不要再向 repo 的 `internal/` 目录新增已跟踪文件；草稿应先放在维护工作区，正式公开后以 `Discussions` 为准。
+- 具体流程以 [docs/workflows/discussion-to-decision.md](./docs/workflows/discussion-to-decision.md) 为准。
 
 ## 维护原则
 
@@ -36,15 +37,10 @@
 - 对外可见的结构变化应更新 `README.md`
 - 版本变化和重要工程里程碑应更新 `CHANGELOG.md`
 - 新增 issue 时，应补该 issue 自己的 `README.md`
+- 达成共识后的方案，应沉淀到 `docs/decisions/`
 
 ## 提交约定
 
 - 提交应保持单一主题，避免把无关改动混在一起
 - 提交信息默认使用简体中文，直接说明本次变更目的；如确有必要补充英文，应以简体中文为主
 - 推送前应确认工作树干净，且测试通过
-
-## Discussions 与维护记录
-
-- 与项目维护相关的阶段性记录，优先使用 GitHub Discussions 承载
-- Discussions 中的维护记录默认使用简体中文
-- 对外公开文档放在 `docs/`，项目组内部维护记录与治理说明放在 `internal/`，不要把两者混写
